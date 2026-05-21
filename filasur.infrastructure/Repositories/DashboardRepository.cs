@@ -59,6 +59,15 @@ public class BitacoraRepository : IBitacoraRepository
             new { Top = top },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task RegistrarAsync(int? idUsuario, string modulo, string accion, string? detalle = null)
+    {
+        using var conn = _factory.CreateConnection();
+        await conn.ExecuteAsync(
+            "dbo.sp_Bitacora_Registrar",
+            new { IdUsuario = idUsuario, Modulo = modulo, Accion = accion, Detalle = detalle },
+            commandType: CommandType.StoredProcedure);
+    }
 }
 
 public class ConfiguracionRepository : IConfiguracionRepository
