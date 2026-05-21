@@ -15,12 +15,28 @@ public class DashboardRepository : IDashboardRepository
         _factory = factory;
     }
 
-    public async Task<DashboardResumen?> ObtenerResumenAsync()
+    public async Task<DashboardData?> ObtenerAsync()
     {
         using var conn = _factory.CreateConnection();
-        return await conn.QueryFirstOrDefaultAsync<DashboardResumen>(
+        using var multi = await conn.QueryMultipleAsync(
             "dbo.sp_Dashboard_Resumen",
             commandType: CommandType.StoredProcedure);
+
+        var resumen = await multi.ReadFirstOrDefaultAsync<DashboardResumen>();
+        if (resumen is null)
+            return null;
+
+        var recientes = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
+        var proximas = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
+        var evolucion = (await multi.ReadAsync<DashboardEvolucionMensualItem>()).ToList();
+
+        return new DashboardData
+        {
+            Resumen = resumen,
+            EvaluacionesRecientes = recientes,
+            ProximasVencer = proximas,
+            EvolucionMensual = evolucion
+        };
     }
 }
 

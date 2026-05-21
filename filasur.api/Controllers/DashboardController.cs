@@ -19,9 +19,26 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("resumen")]
-    public async Task<ActionResult<ApiResult<DashboardResumen>>> Resumen()
+    public async Task<ActionResult<ApiResult<object>>> Resumen()
     {
-        var data = await _service.ObtenerResumenAsync();
-        return Ok(ApiResult<DashboardResumen>.Ok(data ?? new DashboardResumen()));
+        var data = await _service.ObtenerAsync();
+        if (data is null)
+        {
+            return Ok(ApiResult<object>.Ok(new
+            {
+                resumen = new DashboardResumen(),
+                evaluacionesRecientes = Array.Empty<DashboardEvaluacionItem>(),
+                proximasVencer = Array.Empty<DashboardEvaluacionItem>()
+            }));
+        }
+
+        return Ok(ApiResult<object>.Ok(new
+        {
+            resumen = data.Resumen,
+            evaluacionesRecientes = data.EvaluacionesRecientes,
+            proximasVencer = data.ProximasVencer,
+            chartLabels = data.EvolucionMensual.Select(x => x.Mes).ToList(),
+            chartScores = data.EvolucionMensual.Select(x => x.Puntaje).ToList()
+        }));
     }
 }

@@ -178,12 +178,16 @@ public class CatalogoRepository : ICatalogoRepository
         }).ToList();
     }
 
-    public async Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(string? estado)
+    public async Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
+        string? estado,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta,
+        string? producto)
     {
         using var conn = _factory.CreateConnection();
         using var multi = await conn.QueryMultipleAsync(
             "dbo.sp_Reporte_Evaluaciones",
-            new { Estado = estado },
+            new { Estado = estado, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Producto = producto },
             commandType: CommandType.StoredProcedure);
 
         var filas = (await multi.ReadAsync<ReporteEvaluacionFila>()).ToList();

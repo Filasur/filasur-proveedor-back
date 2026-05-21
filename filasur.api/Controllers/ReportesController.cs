@@ -19,9 +19,13 @@ public class ReportesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResult<ReporteEvaluaciones>>> Listar([FromQuery] string? estado)
+    public async Task<ActionResult<ApiResult<ReporteEvaluaciones>>> Listar(
+        [FromQuery] string? estado,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] string? producto)
     {
-        var data = await _service.ObtenerReporteEvaluacionesAsync(estado);
+        var data = await _service.ObtenerReporteEvaluacionesAsync(estado, fechaDesde, fechaHasta, producto);
         return Ok(ApiResult<ReporteEvaluaciones>.Ok(data));
     }
 }

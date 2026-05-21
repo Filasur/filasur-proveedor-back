@@ -4,7 +4,7 @@ namespace filasur.domain.Interfaces;
 
 public interface IDashboardRepository
 {
-    Task<DashboardResumen?> ObtenerResumenAsync();
+    Task<DashboardData?> ObtenerAsync();
 }
 
 public interface IRankingRepository

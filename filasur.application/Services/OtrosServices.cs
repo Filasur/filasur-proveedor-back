@@ -10,7 +10,7 @@ public class DashboardService : IDashboardService
 
     public DashboardService(IDashboardRepository repository) => _repository = repository;
 
-    public Task<DashboardResumen?> ObtenerResumenAsync() => _repository.ObtenerResumenAsync();
+    public Task<DashboardData?> ObtenerAsync() => _repository.ObtenerAsync();
 }
 
 public class RankingService : IRankingService
@@ -102,6 +102,10 @@ public class CatalogoService : ICatalogoService
     public Task<IEnumerable<RolListItem>> ListarRolesAsync() =>
         _repository.ListarRolesAsync();
 
-    public Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(string? estado) =>
-        _repository.ObtenerReporteEvaluacionesAsync(estado);
+    public Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
+        string? estado,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta,
+        string? producto) =>
+        _repository.ObtenerReporteEvaluacionesAsync(estado, fechaDesde, fechaHasta, producto);
 }
