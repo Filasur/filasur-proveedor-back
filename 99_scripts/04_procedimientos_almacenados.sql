@@ -295,12 +295,29 @@ BEGIN
         IdEstadoEvaluacion = @IdEstado,
         FechaEvaluacion = CAST(SYSUTCDATETIME() AS DATE),
         ResultadoTexto = CASE @Nivel
-            WHEN N'APROBADO' THEN N'Proveedor apto para registro en Exactus ERP'
+            WHEN N'APROBADO' THEN N'Proveedor apto'
             WHEN N'OBSERVADO' THEN N'Proveedor con observaciones; requiere seguimiento'
             ELSE N'Proveedor no cumple umbral mínimo'
         END,
         FechaModificacion = SYSUTCDATETIME()
     WHERE IdEvaluacion = @IdEvaluacion;
+
+    /* Consolidar puntajes por área a partir de criterios (escala 0-100 → 0-5) */
+    DELETE FROM dbo.EvaluacionArea WHERE IdEvaluacion = @IdEvaluacion;
+
+    INSERT INTO dbo.EvaluacionArea (IdEvaluacion, Area, IdUsuarioEvaluador, Puntaje, Peso, PuntajePonderado, Observaciones)
+    SELECT
+        @IdEvaluacion,
+        c.Area,
+        @IdUsuario,
+        CAST(ROUND(SUM(ec.Puntaje * c.Peso / 100.0) / NULLIF(SUM(c.Peso), 0) / 20.0, 2) AS DECIMAL(4, 2)),
+        SUM(c.Peso),
+        CAST(ROUND(SUM(ec.Puntaje * c.Peso) / 2000.0, 2) AS DECIMAL(6, 3)),
+        NULL
+    FROM dbo.EvaluacionCriterio ec
+    INNER JOIN dbo.CriterioEvaluacion c ON c.IdCriterio = ec.IdCriterio
+    WHERE ec.IdEvaluacion = @IdEvaluacion
+    GROUP BY c.Area;
 
     DECLARE @IdProveedor INT;
     SELECT @IdProveedor = IdProveedor FROM dbo.Evaluacion WHERE IdEvaluacion = @IdEvaluacion;
@@ -406,17 +423,36 @@ BEGIN
     LEFT JOIN dbo.Producto pr ON pr.IdProducto = e.IdProducto
     WHERE e.IdEvaluacion = @IdEvaluacion;
 
-    /* Áreas */
-    SELECT
-        ea.Area AS area,
-        u.NombreCompleto AS evaluador,
-        ea.Puntaje AS puntaje,
-        ea.Peso AS peso,
-        ea.PuntajePonderado AS ponderado,
-        ea.Observaciones AS observaciones
-    FROM dbo.EvaluacionArea ea
-    LEFT JOIN dbo.Usuario u ON u.IdUsuario = ea.IdUsuarioEvaluador
-    WHERE ea.IdEvaluacion = @IdEvaluacion;
+    /* Áreas (guardadas o calculadas desde criterios) */
+    IF EXISTS (SELECT 1 FROM dbo.EvaluacionArea WHERE IdEvaluacion = @IdEvaluacion)
+    BEGIN
+        SELECT
+            ea.Area AS area,
+            ISNULL(u.NombreCompleto, N'Consolidado') AS evaluador,
+            ea.Puntaje AS puntaje,
+            ea.Peso AS peso,
+            ea.PuntajePonderado AS ponderado,
+            ea.Observaciones AS observaciones
+        FROM dbo.EvaluacionArea ea
+        LEFT JOIN dbo.Usuario u ON u.IdUsuario = ea.IdUsuarioEvaluador
+        WHERE ea.IdEvaluacion = @IdEvaluacion
+        ORDER BY ea.Area;
+    END
+    ELSE
+    BEGIN
+        SELECT
+            c.Area AS area,
+            N'Consolidado' AS evaluador,
+            CAST(ROUND(SUM(ec.Puntaje * c.Peso / 100.0) / NULLIF(SUM(c.Peso), 0) / 20.0, 2) AS DECIMAL(4, 2)) AS puntaje,
+            SUM(c.Peso) AS peso,
+            CAST(ROUND(SUM(ec.Puntaje * c.Peso) / 2000.0, 2) AS DECIMAL(6, 3)) AS ponderado,
+            CAST(NULL AS NVARCHAR(500)) AS observaciones
+        FROM dbo.EvaluacionCriterio ec
+        INNER JOIN dbo.CriterioEvaluacion c ON c.IdCriterio = ec.IdCriterio
+        WHERE ec.IdEvaluacion = @IdEvaluacion
+        GROUP BY c.Area
+        ORDER BY c.Area;
+    END
 
     /* Criterios */
     SELECT
