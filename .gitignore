@@ -1,0 +1,16 @@
+################################################################################
+# Este archivo .gitignore ha sido creado automáticamente por Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/
+*.user
+/filasur.api/bin/
+/filasur.api/obj
+/filasur.application/bin/
+/filasur.application/obj
+/filasur.domain/bin/
+/filasur.domain/obj
+/filasur.infrastructure/bin/
+/filasur.infrastructure/obj
+/filasur.api/appsettings.json
+/filasur.api/appsettings.Development.json

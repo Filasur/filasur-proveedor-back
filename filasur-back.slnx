@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="filasur.api/filasur.api.csproj" />
+  <Project Path="filasur.application/filasur.application.csproj" />
+  <Project Path="filasur.domain/filasur.domain.csproj" />
+  <Project Path="filasur.infrastructure/filasur.infrastructure.csproj" />
+</Solution>
