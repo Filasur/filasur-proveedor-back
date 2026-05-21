@@ -26,6 +26,33 @@ public class ProveedoresController : ControllerBase
         return Ok(ApiResult<IEnumerable<ProveedorListItem>>.Ok(data));
     }
 
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ApiResult<object>>> Obtener(int id)
+    {
+        var data = await _service.ObtenerAsync(id);
+        if (data is null)
+            return NotFound(ApiResult<object>.Fail("Proveedor no encontrado"));
+
+        return Ok(ApiResult<object>.Ok(new
+        {
+            data.Id,
+            data.Ruc,
+            data.RazonSocial,
+            data.TipoProveedor,
+            data.Rubro,
+            data.Contacto,
+            data.Telefono,
+            data.Correo,
+            data.Direccion,
+            data.Estado,
+            data.Clasificacion,
+            data.PuntajePromedio,
+            evaluaciones = data.EvaluacionesLista,
+            documentos = data.Documentos,
+            historial = data.Historial
+        }));
+    }
+
     [HttpPost]
     public async Task<ActionResult<ApiResult<object>>> Registrar([FromBody] ProveedorRegistrar request)
     {

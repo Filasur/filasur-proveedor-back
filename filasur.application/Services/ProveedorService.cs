@@ -16,6 +16,9 @@ public class ProveedorService : IProveedorService
     public Task<IEnumerable<ProveedorListItem>> ListarAsync(string? busqueda) =>
         _repository.ListarAsync(busqueda);
 
+    public Task<ProveedorDetalle?> ObtenerAsync(int id) =>
+        _repository.ObtenerDetalleAsync(id);
+
     public Task<int> RegistrarAsync(ProveedorRegistrar proveedor, int idUsuario) =>
         _repository.RegistrarAsync(proveedor, idUsuario);
 

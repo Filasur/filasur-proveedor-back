@@ -549,6 +549,61 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_Proveedor_Obtener
+    @IdProveedor INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RazonSocial NVARCHAR(200);
+    SELECT @RazonSocial = RazonSocial FROM dbo.Proveedor WHERE IdProveedor = @IdProveedor;
+
+    IF @RazonSocial IS NULL
+        RETURN;
+
+    /* 1. Cabecera */
+    SELECT
+        p.IdProveedor AS id,
+        p.Ruc AS ruc,
+        p.RazonSocial AS razonSocial,
+        tp.Nombre AS tipoProveedor,
+        p.Rubro AS rubro,
+        p.Contacto AS contacto,
+        p.Telefono AS telefono,
+        p.Correo AS correo,
+        p.Direccion AS direccion,
+        ep.Nombre AS estado,
+        p.IdClasificacion AS clasificacion,
+        p.PuntajePromedio AS puntajePromedio,
+        p.TotalEvaluaciones AS evaluaciones
+    FROM dbo.Proveedor p
+    INNER JOIN dbo.CatTipoProveedor tp ON tp.IdTipoProveedor = p.IdTipoProveedor
+    INNER JOIN dbo.CatEstadoProveedor ep ON ep.IdEstadoProveedor = p.IdEstadoProveedor
+    WHERE p.IdProveedor = @IdProveedor;
+
+    /* 2. Evaluaciones del proveedor */
+    EXEC dbo.sp_Evaluacion_Listar @IdProveedor = @IdProveedor, @EstadoCodigo = NULL;
+
+    /* 3. Documentos */
+    EXEC dbo.sp_Documento_Listar @IdProveedor = @IdProveedor, @Busqueda = NULL;
+
+    /* 4. Bitácora relacionada */
+    SELECT TOP (30)
+        b.IdBitacora AS id,
+        CONVERT(VARCHAR(16), b.FechaHora, 103) + N' ' + CONVERT(VARCHAR(5), b.FechaHora, 108) AS fecha,
+        ISNULL(u.NombreCompleto, N'Sistema') AS usuario,
+        b.Accion AS accion,
+        b.Detalle AS detalle,
+        b.Modulo AS modulo
+    FROM dbo.Bitacora b
+    LEFT JOIN dbo.Usuario u ON u.IdUsuario = b.IdUsuario
+    WHERE b.Detalle LIKE N'%' + @RazonSocial + N'%'
+       OR b.Detalle LIKE N'%proveedor Id=' + CAST(@IdProveedor AS NVARCHAR(12)) + N'%'
+       OR b.Detalle LIKE N'%Id=' + CAST(@IdProveedor AS NVARCHAR(12)) + N'%'
+    ORDER BY b.FechaHora DESC;
+END;
+GO
+
 PRINT N'Procedimientos de documentos creados.';
 GO
 
