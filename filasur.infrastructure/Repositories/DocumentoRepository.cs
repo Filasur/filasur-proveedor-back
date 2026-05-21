@@ -45,6 +45,20 @@ public class DocumentoRepository : IDocumentoRepository
         return p.Get<int>("@IdDocumento");
     }
 
+    public async Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento)
+    {
+        const string sql = """
+            SELECT NombreArchivo, RutaAlmacenamiento
+            FROM dbo.DocumentoProveedor
+            WHERE IdDocumento = @IdDocumento
+            """;
+
+        using var conn = _factory.CreateConnection();
+        return await conn.QueryFirstOrDefaultAsync<DocumentoArchivo>(
+            sql,
+            new { IdDocumento = idDocumento });
+    }
+
     private static DocumentoListItem MapListItem(DocumentoListRow row)
     {
         return new DocumentoListItem

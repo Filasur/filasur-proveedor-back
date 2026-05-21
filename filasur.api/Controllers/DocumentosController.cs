@@ -86,4 +86,33 @@ public class DocumentosController : ControllerBase
 
         return Ok(ApiResult<object>.Ok(new { ids }));
     }
+
+    [HttpGet("documentos/{id:int}/descargar")]
+    public async Task<IActionResult> Descargar(int id)
+    {
+        var meta = await _documentoService.ObtenerArchivoAsync(id);
+        if (meta is null || string.IsNullOrWhiteSpace(meta.RutaAlmacenamiento))
+            return NotFound();
+
+        var rutaFisica = Path.Combine(_env.ContentRootPath, "uploads", meta.RutaAlmacenamiento.Replace('/', Path.DirectorySeparatorChar));
+        if (!System.IO.File.Exists(rutaFisica))
+            return NotFound();
+
+        var contentType = ObtenerContentType(meta.NombreArchivo);
+        return PhysicalFile(rutaFisica, contentType, meta.NombreArchivo);
+    }
+
+    private static string ObtenerContentType(string nombreArchivo)
+    {
+        var ext = Path.GetExtension(nombreArchivo).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            _ => "application/octet-stream"
+        };
+    }
 }

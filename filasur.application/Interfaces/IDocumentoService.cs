@@ -9,4 +9,5 @@ public interface IDocumentoService
         int idProveedor,
         IEnumerable<DocumentoRegistro> documentos,
         int idUsuario);
+    Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento);
 }

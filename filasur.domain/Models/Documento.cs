@@ -18,3 +18,9 @@ public class DocumentoRegistro
     public long TamanoBytes { get; set; }
     public string RutaAlmacenamiento { get; set; } = string.Empty;
 }
+
+public class DocumentoArchivo
+{
+    public string NombreArchivo { get; set; } = string.Empty;
+    public string RutaAlmacenamiento { get; set; } = string.Empty;
+}

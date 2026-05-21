@@ -6,4 +6,5 @@ public interface IDocumentoRepository
 {
     Task<IEnumerable<DocumentoListItem>> ListarAsync(int? idProveedor, string? busqueda);
     Task<int> RegistrarAsync(int idProveedor, DocumentoRegistro documento);
+    Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento);
 }

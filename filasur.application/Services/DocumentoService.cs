@@ -42,4 +42,7 @@ public class DocumentoService : IDocumentoService
 
         return ids;
     }
+
+    public Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento) =>
+        _documentos.ObtenerArchivoAsync(idDocumento);
 }
