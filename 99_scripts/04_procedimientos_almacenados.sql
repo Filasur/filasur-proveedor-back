@@ -987,25 +987,39 @@ BEGIN
     IF @Producto = N'Todos' OR @Producto = N''
         SET @Producto = NULL;
 
-    ;WITH EvaluacionesFiltradas AS (
-        SELECT
-            e.IdEvaluacion,
-            p.RazonSocial AS proveedor,
-            pr.Nombre AS producto,
-            CONVERT(VARCHAR(10), COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)), 103) AS fechaEvaluacion,
-            e.PuntajeFinal AS puntajeFinal,
-            ce.Nombre AS estado,
-            COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)) AS fechaRef
-        FROM dbo.Evaluacion e
-        INNER JOIN dbo.Proveedor p ON p.IdProveedor = e.IdProveedor
-        INNER JOIN dbo.CatEstadoEvaluacion ce ON ce.IdEstadoEvaluacion = e.IdEstadoEvaluacion
-        LEFT JOIN dbo.Producto pr ON pr.IdProducto = e.IdProducto
-        WHERE e.PuntajeFinal IS NOT NULL
-          AND (@Estado IS NULL OR ce.Nombre = @Estado)
-          AND (@FechaDesde IS NULL OR COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)) >= @FechaDesde)
-          AND (@FechaHasta IS NULL OR COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)) <= @FechaHasta)
-          AND (@Producto IS NULL OR pr.Nombre = @Producto)
+    /* Tabla temporal: un CTE solo aplica al SELECT inmediatamente siguiente (SQL Server 2019). */
+    CREATE TABLE #EvaluacionesFiltradas (
+        IdEvaluacion     INT             NOT NULL,
+        proveedor        NVARCHAR(200)   NOT NULL,
+        producto         NVARCHAR(150)   NULL,
+        fechaEvaluacion  VARCHAR(10)     NULL,
+        puntajeFinal     DECIMAL(4, 2)   NULL,
+        estado           NVARCHAR(50)    NOT NULL,
+        fechaRef         DATE            NOT NULL
+    );
+
+    INSERT INTO #EvaluacionesFiltradas (
+        IdEvaluacion, proveedor, producto, fechaEvaluacion, puntajeFinal, estado, fechaRef
     )
+    SELECT
+        e.IdEvaluacion,
+        p.RazonSocial,
+        pr.Nombre,
+        CONVERT(VARCHAR(10), COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)), 103),
+        e.PuntajeFinal,
+        ce.Nombre,
+        COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE))
+    FROM dbo.Evaluacion e
+    INNER JOIN dbo.Proveedor p ON p.IdProveedor = e.IdProveedor
+    INNER JOIN dbo.CatEstadoEvaluacion ce ON ce.IdEstadoEvaluacion = e.IdEstadoEvaluacion
+    LEFT JOIN dbo.Producto pr ON pr.IdProducto = e.IdProducto
+    WHERE e.PuntajeFinal IS NOT NULL
+      AND (@Estado IS NULL OR ce.Nombre = @Estado)
+      AND (@FechaDesde IS NULL OR COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR COALESCE(e.FechaEvaluacion, CAST(e.FechaCreacion AS DATE)) <= @FechaHasta)
+      AND (@Producto IS NULL OR pr.Nombre = @Producto);
+
+    /* Result set 1: filas del reporte */
     SELECT
         IdEvaluacion AS id,
         proveedor,
@@ -1013,15 +1027,16 @@ BEGIN
         fechaEvaluacion,
         puntajeFinal,
         estado
-    FROM EvaluacionesFiltradas
+    FROM #EvaluacionesFiltradas
     ORDER BY fechaRef DESC;
 
+    /* Result set 2: totales KPI */
     SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN estado = N'Aprobado' THEN 1 ELSE 0 END) AS aprobados,
         SUM(CASE WHEN estado = N'Observado' THEN 1 ELSE 0 END) AS observados,
         SUM(CASE WHEN estado = N'Rechazado' THEN 1 ELSE 0 END) AS rechazados
-    FROM EvaluacionesFiltradas;
+    FROM #EvaluacionesFiltradas;
 END;
 GO
 
