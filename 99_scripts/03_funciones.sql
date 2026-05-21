@@ -84,6 +84,15 @@ CREATE OR ALTER FUNCTION dbo.fn_ContarAreasPendientes (@IdEvaluacion INT)
 RETURNS INT
 AS
 BEGIN
+    /* Evaluación ya finalizada (criterios consolidados): sin áreas pendientes */
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.Evaluacion
+        WHERE IdEvaluacion = @IdEvaluacion
+          AND PuntajeFinal IS NOT NULL
+    )
+        RETURN 0;
+
     DECLARE @TotalAreas INT;
     DECLARE @AreasCompletadas INT;
 
