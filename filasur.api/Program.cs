@@ -33,6 +33,8 @@ builder.Services.AddScoped<IRankingRepository, RankingRepository>();
 builder.Services.AddScoped<IBitacoraRepository, BitacoraRepository>();
 builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
 builder.Services.AddScoped<IDocumentoRepository, DocumentoRepository>();
+builder.Services.AddScoped<ICriterioRepository, CriterioRepository>();
+builder.Services.AddScoped<ICatalogoRepository, CatalogoRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
@@ -42,6 +44,8 @@ builder.Services.AddScoped<IRankingService, RankingService>();
 builder.Services.AddScoped<IBitacoraService, BitacoraService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<IDocumentoService, DocumentoService>();
+builder.Services.AddScoped<ICriterioService, CriterioService>();
+builder.Services.AddScoped<ICatalogoService, CatalogoService>();
 
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

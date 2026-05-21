@@ -42,3 +42,66 @@ public class ConfiguracionService : IConfiguracionService
     public Task GuardarAsync(ConfiguracionGuardar config, int idUsuario) =>
         _repository.GuardarAsync(config, idUsuario);
 }
+
+public class CatalogoService : ICatalogoService
+{
+    private const string PasswordTemporal = "Filasur123";
+    private readonly ICatalogoRepository _repository;
+
+    public CatalogoService(ICatalogoRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public Task<IEnumerable<UnidadMedidaItem>> ListarUnidadesAsync() =>
+        _repository.ListarUnidadesAsync();
+
+    public async Task<UnidadMedidaItem> RegistrarUnidadAsync(UnidadMedidaGuardar unidad)
+    {
+        var id = await _repository.RegistrarUnidadAsync(unidad);
+        return (await _repository.ObtenerUnidadAsync(id))!;
+    }
+
+    public async Task<UnidadMedidaItem> ActualizarUnidadAsync(int id, UnidadMedidaGuardar unidad)
+    {
+        await _repository.ActualizarUnidadAsync(id, unidad);
+        return (await _repository.ObtenerUnidadAsync(id))!;
+    }
+
+    public Task<IEnumerable<ProductoListItem>> ListarProductosAsync() =>
+        _repository.ListarProductosAsync();
+
+    public async Task<ProductoListItem> RegistrarProductoAsync(ProductoGuardar producto)
+    {
+        var id = await _repository.RegistrarProductoAsync(producto);
+        return (await _repository.ObtenerProductoAsync(id))!;
+    }
+
+    public async Task<ProductoListItem> ActualizarProductoAsync(int id, ProductoGuardar producto)
+    {
+        await _repository.ActualizarProductoAsync(id, producto);
+        return (await _repository.ObtenerProductoAsync(id))!;
+    }
+
+    public Task<IEnumerable<UsuarioListItem>> ListarUsuariosAsync() =>
+        _repository.ListarUsuariosAsync();
+
+    public async Task<UsuarioListItem> RegistrarUsuarioAsync(UsuarioCrear usuario)
+    {
+        var hash = BCrypt.Net.BCrypt.HashPassword(PasswordTemporal);
+        var id = await _repository.RegistrarUsuarioAsync(usuario, hash);
+        return (await _repository.ObtenerUsuarioAsync(id))!;
+    }
+
+    public async Task<UsuarioListItem> ActualizarUsuarioAsync(int id, UsuarioActualizar usuario)
+    {
+        await _repository.ActualizarUsuarioAsync(id, usuario);
+        return (await _repository.ObtenerUsuarioAsync(id))!;
+    }
+
+    public Task<IEnumerable<RolListItem>> ListarRolesAsync() =>
+        _repository.ListarRolesAsync();
+
+    public Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(string? estado) =>
+        _repository.ObtenerReporteEvaluacionesAsync(estado);
+}

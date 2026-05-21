@@ -13,10 +13,12 @@ namespace filasur.api.Controllers;
 public class EvaluacionesController : ControllerBase
 {
     private readonly IEvaluacionService _service;
+    private readonly ICriterioService _criterioService;
 
-    public EvaluacionesController(IEvaluacionService service)
+    public EvaluacionesController(IEvaluacionService service, ICriterioService criterioService)
     {
         _service = service;
+        _criterioService = criterioService;
     }
 
     [HttpGet]
@@ -27,6 +29,13 @@ public class EvaluacionesController : ControllerBase
     {
         var data = await _service.ListarAsync(proveedorId, estado, pendientes);
         return Ok(ApiResult<IEnumerable<EvaluacionListItem>>.Ok(data));
+    }
+
+    [HttpGet("criterios")]
+    public async Task<ActionResult<ApiResult<IEnumerable<CriterioListItem>>>> ListarCriterios()
+    {
+        var data = await _criterioService.ListarAsync();
+        return Ok(ApiResult<IEnumerable<CriterioListItem>>.Ok(data));
     }
 
     [HttpPost("borrador")]
