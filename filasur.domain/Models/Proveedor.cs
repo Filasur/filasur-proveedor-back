@@ -12,7 +12,7 @@ public class ProveedorListItem
     public string? Correo { get; set; }
     public string? Direccion { get; set; }
     public string Estado { get; set; } = string.Empty;
-    public int? Clasificacion { get; set; }
+    public string? Clasificacion { get; set; }
     public decimal? PuntajePromedio { get; set; }
     public int Evaluaciones { get; set; }
 }
