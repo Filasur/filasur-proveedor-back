@@ -9,6 +9,30 @@ public class DashboardResumen
     public decimal? PuntajePromedio { get; set; }
 }
 
+public class DashboardEvaluacionItem
+{
+    public int Id { get; set; }
+    public string Proveedor { get; set; } = string.Empty;
+    public string? Producto { get; set; }
+    public int AreasPendientes { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string? FechaLimite { get; set; }
+}
+
+public class DashboardEvolucionMensualItem
+{
+    public string Mes { get; set; } = string.Empty;
+    public int Puntaje { get; set; }
+}
+
+public class DashboardData
+{
+    public DashboardResumen Resumen { get; set; } = new();
+    public List<DashboardEvaluacionItem> EvaluacionesRecientes { get; set; } = [];
+    public List<DashboardEvaluacionItem> ProximasVencer { get; set; } = [];
+    public List<DashboardEvolucionMensualItem> EvolucionMensual { get; set; } = [];
+}
+
 public class RankingItem
 {
     public int Posicion { get; set; }

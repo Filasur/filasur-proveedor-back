@@ -15,12 +15,28 @@ public class DashboardRepository : IDashboardRepository
         _factory = factory;
     }
 
-    public async Task<DashboardResumen?> ObtenerResumenAsync()
+    public async Task<DashboardData?> ObtenerAsync()
     {
         using var conn = _factory.CreateConnection();
-        return await conn.QueryFirstOrDefaultAsync<DashboardResumen>(
+        using var multi = await conn.QueryMultipleAsync(
             "dbo.sp_Dashboard_Resumen",
             commandType: CommandType.StoredProcedure);
+
+        var resumen = await multi.ReadFirstOrDefaultAsync<DashboardResumen>();
+        if (resumen is null)
+            return null;
+
+        var recientes = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
+        var proximas = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
+        var evolucion = (await multi.ReadAsync<DashboardEvolucionMensualItem>()).ToList();
+
+        return new DashboardData
+        {
+            Resumen = resumen,
+            EvaluacionesRecientes = recientes,
+            ProximasVencer = proximas,
+            EvolucionMensual = evolucion
+        };
     }
 }
 
@@ -57,6 +73,15 @@ public class BitacoraRepository : IBitacoraRepository
         return await conn.QueryAsync<BitacoraItem>(
             "dbo.sp_Bitacora_Listar",
             new { Top = top },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task RegistrarAsync(int? idUsuario, string modulo, string accion, string? detalle = null)
+    {
+        using var conn = _factory.CreateConnection();
+        await conn.ExecuteAsync(
+            "dbo.sp_Bitacora_Registrar",
+            new { IdUsuario = idUsuario, Modulo = modulo, Accion = accion, Detalle = detalle },
             commandType: CommandType.StoredProcedure);
     }
 }
