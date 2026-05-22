@@ -1,4 +1,6 @@
+using filasur.api.Middleware;
 using filasur.application.Interfaces;
+using filasur.application.Logging;
 using filasur.application.Services;
 using filasur.domain.Interfaces;
 using filasur.infrastructure.Data;
@@ -87,6 +89,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+var logDirectory = Path.Combine(builder.Environment.ContentRootPath, "log");
+Directory.CreateDirectory(logDirectory);
+builder.Services.AddSingleton<IExceptionLogger>(_ => new ExceptionLog4NetLogger(logDirectory));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -99,6 +105,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<ExceptionLoggingMiddleware>();
 app.UseCors();
 
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
