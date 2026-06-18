@@ -29,6 +29,9 @@ public class AuthService : IAuthService
         if (credencial is null)
             return null;
 
+        if (!credencial.Activo)
+            throw new InvalidOperationException("El usuario está inactivo. Contacte al administrador.");
+
         if (credencial.BloqueadoHasta.HasValue && credencial.BloqueadoHasta.Value > DateTime.UtcNow)
             throw new InvalidOperationException("La cuenta está bloqueada temporalmente. Intente nuevamente más tarde.");
 
@@ -58,7 +61,7 @@ public class AuthService : IAuthService
     public async Task<RecuperarPasswordResult?> RecuperarPasswordAsync(string email)
     {
         var credencial = await _authRepository.ObtenerPorEmailAsync(email);
-        if (credencial is null)
+        if (credencial is null || !credencial.Activo)
             return null;
 
         var passwordTemporal = GenerarPasswordTemporal();

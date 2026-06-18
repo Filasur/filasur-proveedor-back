@@ -21,4 +21,5 @@ public class UsuarioCredencial
     public int IntentosFallidos { get; set; }
     public DateTime? BloqueadoHasta { get; set; }
     public bool DebeCambiarPassword { get; set; }
+    public bool Activo { get; set; }
 }

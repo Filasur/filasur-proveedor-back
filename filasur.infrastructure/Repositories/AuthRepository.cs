@@ -26,10 +26,11 @@ public class AuthRepository : IAuthRepository
                 u.PasswordHash AS PasswordHash,
                 ISNULL(u.IntentosFallidos, 0) AS IntentosFallidos,
                 u.BloqueadoHasta AS BloqueadoHasta,
-                ISNULL(u.DebeCambiarPassword, 0) AS DebeCambiarPassword
+                ISNULL(u.DebeCambiarPassword, 0) AS DebeCambiarPassword,
+                CASE WHEN u.IdEstadoUsuario = 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS Activo
             FROM dbo.Usuario u
             INNER JOIN dbo.Rol r ON r.IdRol = u.IdRol
-            WHERE u.Email = @Email AND u.IdEstadoUsuario = 1
+            WHERE u.Email = @Email
             """;
 
         using var conn = _factory.CreateConnection();
@@ -48,7 +49,8 @@ public class AuthRepository : IAuthRepository
                 u.PasswordHash AS PasswordHash,
                 ISNULL(u.IntentosFallidos, 0) AS IntentosFallidos,
                 u.BloqueadoHasta AS BloqueadoHasta,
-                ISNULL(u.DebeCambiarPassword, 0) AS DebeCambiarPassword
+                ISNULL(u.DebeCambiarPassword, 0) AS DebeCambiarPassword,
+                CASE WHEN u.IdEstadoUsuario = 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS Activo
             FROM dbo.Usuario u
             INNER JOIN dbo.Rol r ON r.IdRol = u.IdRol
             WHERE u.IdUsuario = @IdUsuario AND u.IdEstadoUsuario = 1
