@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.Catalogos)]
+[Authorize]
 [ApiController]
 [Route("api/criterios")]
 public class CriteriosController : ControllerBase
@@ -20,6 +20,7 @@ public class CriteriosController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<CriterioListItem>>>> Listar()
     {
         var data = await _service.ListarAsync();
@@ -27,6 +28,7 @@ public class CriteriosController : ControllerBase
     }
 
     [HttpPut]
+    [Authorize(Roles = AppRoles.Catalogos)]
     public async Task<ActionResult<ApiResult<IEnumerable<CriterioListItem>>>> Guardar(
         [FromBody] List<CriterioGuardarItem> lista)
     {

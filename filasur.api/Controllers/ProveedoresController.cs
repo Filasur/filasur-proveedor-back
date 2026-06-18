@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.GestionProveedores)]
+[Authorize]
 [ApiController]
 [Route("api/proveedores")]
 public class ProveedoresController : ControllerBase
@@ -21,6 +21,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<ProveedorListItem>>>> Listar([FromQuery] string? q)
     {
         var data = await _service.ListarAsync(q);
@@ -28,6 +29,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<object>>> Obtener(int id)
     {
         var data = await _service.ObtenerAsync(id);
@@ -55,6 +57,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = AppRoles.GestionProveedores)]
     public async Task<ActionResult<ApiResult<object>>> Registrar([FromBody] ProveedorRegistrar request)
     {
         var id = await _service.RegistrarAsync(request, User.GetUserId());
@@ -62,6 +65,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = AppRoles.GestionProveedores)]
     public async Task<ActionResult<ApiResult<object>>> Actualizar(int id, [FromBody] ProveedorActualizar request)
     {
         await _service.ActualizarAsync(id, request, User.GetUserId());
