@@ -1,0 +1,35 @@
+substitutions:
+  _REGION: us-central1
+  _SERVICE: filasur-proveedor-api
+  _FRONTEND_ORIGIN: https://filasur-proveedor-front-CHANGE_ME.a.run.app
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - filasur.api/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/filasur/${_SERVICE}:$COMMIT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/filasur/${_SERVICE}:$COMMIT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/filasur/${_SERVICE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --set-env-vars=ASPNETCORE_URLS=http://0.0.0.0:8080,Cors__AllowedOrigins__0=${_FRONTEND_ORIGIN}
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/filasur/${_SERVICE}:$COMMIT_SHA

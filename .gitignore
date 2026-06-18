@@ -13,4 +13,8 @@
 /filasur.infrastructure/bin/
 /filasur.infrastructure/obj
 /filasur.api/appsettings.json
+/filasur.api/uploads/
 /filasur.api/appsettings.Development.json
+/filasur.api/Properties/PublishProfiles
+/_publish-test
+/filasur.api/log

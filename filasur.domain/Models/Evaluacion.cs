@@ -15,6 +15,7 @@ public class EvaluacionListItem
 
 public class EvaluacionBorradorRequest
 {
+    public int? Id { get; set; }
     public int ProveedorId { get; set; }
     public string Periodo { get; set; } = string.Empty;
     public int? IdProducto { get; set; }
@@ -23,6 +24,18 @@ public class EvaluacionBorradorRequest
     public string? Observaciones { get; set; }
     public Dictionary<string, decimal> Puntajes { get; set; } = new();
     public bool Finalizar { get; set; }
+}
+
+public class EvaluacionBorradorDetalle
+{
+    public int Id { get; set; }
+    public int ProveedorId { get; set; }
+    public string Periodo { get; set; } = string.Empty;
+    public int? IdProducto { get; set; }
+    public string? OrdenCompra { get; set; }
+    public DateTime? FechaLimite { get; set; }
+    public string? Observaciones { get; set; }
+    public Dictionary<string, decimal> Puntajes { get; set; } = new();
 }
 
 public class CriterioPuntaje
