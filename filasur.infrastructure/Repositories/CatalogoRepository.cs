@@ -159,6 +159,20 @@ public class CatalogoRepository : ICatalogoRepository
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task DesbloquearUsuarioAsync(int id)
+    {
+        using var conn = _factory.CreateConnection();
+        await conn.ExecuteAsync(
+            """
+            UPDATE dbo.Usuario
+            SET IntentosFallidos = 0,
+                BloqueadoHasta = NULL,
+                FechaModificacion = SYSUTCDATETIME()
+            WHERE IdUsuario = @IdUsuario
+            """,
+            new { IdUsuario = id });
+    }
+
     public async Task<IEnumerable<RolListItem>> ListarRolesAsync()
     {
         using var conn = _factory.CreateConnection();

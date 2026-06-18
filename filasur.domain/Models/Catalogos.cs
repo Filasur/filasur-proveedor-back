@@ -41,6 +41,9 @@ public class UsuarioListItem
     public string Email { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
+    public int IntentosFallidos { get; set; }
+    public DateTime? BloqueadoHasta { get; set; }
+    public bool Bloqueado { get; set; }
 }
 
 public class UsuarioCrear

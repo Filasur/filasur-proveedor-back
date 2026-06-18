@@ -39,4 +39,11 @@ public class UsuariosController : ControllerBase
         var data = await _service.ActualizarUsuarioAsync(id, request);
         return Ok(ApiResult<UsuarioListItem>.Ok(data));
     }
+
+    [HttpPost("{id:int}/desbloquear")]
+    public async Task<ActionResult<ApiResult<UsuarioListItem>>> Desbloquear(int id)
+    {
+        var data = await _service.DesbloquearUsuarioAsync(id);
+        return Ok(ApiResult<UsuarioListItem>.Ok(data));
+    }
 }

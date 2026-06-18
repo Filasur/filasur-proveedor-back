@@ -21,6 +21,28 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_Usuario_Listar
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        u.IdUsuario AS id,
+        u.NombreCompleto AS nombre,
+        u.Email AS email,
+        r.Nombre AS rol,
+        CASE WHEN u.IdEstadoUsuario = 1 THEN N'Activo' ELSE N'Inactivo' END AS estado,
+        ISNULL(u.IntentosFallidos, 0) AS intentosFallidos,
+        u.BloqueadoHasta AS bloqueadoHasta,
+        CASE WHEN u.BloqueadoHasta IS NOT NULL AND u.BloqueadoHasta > SYSUTCDATETIME()
+            THEN CAST(1 AS bit)
+            ELSE CAST(0 AS bit)
+        END AS bloqueado
+    FROM dbo.Usuario u
+    INNER JOIN dbo.Rol r ON r.IdRol = u.IdRol
+    ORDER BY u.NombreCompleto;
+END;
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_Rol_ActualizarModulos
     @IdRol INT,
     @ModulosJson NVARCHAR(MAX)

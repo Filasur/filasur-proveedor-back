@@ -99,6 +99,12 @@ public class CatalogoService : ICatalogoService
         return (await _repository.ObtenerUsuarioAsync(id))!;
     }
 
+    public async Task<UsuarioListItem> DesbloquearUsuarioAsync(int id)
+    {
+        await _repository.DesbloquearUsuarioAsync(id);
+        return (await _repository.ObtenerUsuarioAsync(id))!;
+    }
+
     public Task<IEnumerable<RolListItem>> ListarRolesAsync() =>
         _repository.ListarRolesAsync();
 
