@@ -1,3 +1,4 @@
+using filasur.api.Models;
 using filasur.application.Logging;
 
 namespace filasur.api.Middleware;
@@ -21,7 +22,16 @@ public class ExceptionLoggingMiddleware
         {
             var path = context.Request.Path.HasValue ? context.Request.Path.Value : "/";
             exceptionLogger.Log(ex, $"{context.Request.Method} {path}");
-            throw;
+
+            if (context.Response.HasStarted)
+                throw;
+
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsJsonAsync(
+                ApiResult<object>.Fail($"Error interno del servidor: {ex.Message}"));
         }
     }
 }

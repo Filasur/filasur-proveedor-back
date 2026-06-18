@@ -117,8 +117,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseMiddleware<ExceptionLoggingMiddleware>();
 app.UseCors();
+app.UseMiddleware<ExceptionLoggingMiddleware>();
 
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
 Directory.CreateDirectory(uploadsPath);
