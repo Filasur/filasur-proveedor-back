@@ -1,5 +1,6 @@
 using filasur.api.Extensions;
 using filasur.api.Models;
+using filasur.api.Security;
 using filasur.application.Interfaces;
 using filasur.domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize]
+[Authorize(Roles = AppRoles.Documentos)]
 [ApiController]
 [Route("api")]
 public class DocumentosController : ControllerBase

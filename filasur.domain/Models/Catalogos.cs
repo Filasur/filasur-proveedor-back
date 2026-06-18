@@ -41,6 +41,9 @@ public class UsuarioListItem
     public string Email { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
+    public int IntentosFallidos { get; set; }
+    public DateTime? BloqueadoHasta { get; set; }
+    public bool Bloqueado { get; set; }
 }
 
 public class UsuarioCrear
@@ -63,6 +66,11 @@ public class RolListItem
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
+    public List<string> Modulos { get; set; } = [];
+}
+
+public class RolActualizarModulos
+{
     public List<string> Modulos { get; set; } = [];
 }
 

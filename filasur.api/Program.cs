@@ -1,4 +1,6 @@
+using filasur.api.Middleware;
 using filasur.application.Interfaces;
+using filasur.application.Logging;
 using filasur.application.Services;
 using filasur.domain.Interfaces;
 using filasur.infrastructure.Data;
@@ -43,8 +45,20 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+        .Select(origin => origin.Trim().TrimEnd('/'))
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    {
+        policy.AllowAnyHeader().AllowAnyMethod();
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins);
+        else
+            policy.AllowAnyOrigin();
+    });
 });
 
 builder.Services.AddScoped<ISqlConnectionFactory, SqlConnectionFactory>();
@@ -87,6 +101,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+var logDirectory = Path.Combine(builder.Environment.ContentRootPath, "log");
+Directory.CreateDirectory(logDirectory);
+builder.Services.AddSingleton<IExceptionLogger>(_ => new ExceptionLog4NetLogger(logDirectory));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -99,6 +117,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<ExceptionLoggingMiddleware>();
 app.UseCors();
 
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");

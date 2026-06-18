@@ -18,8 +18,10 @@ public interface ICatalogoRepository
     Task<UsuarioListItem?> ObtenerUsuarioAsync(int id);
     Task<int> RegistrarUsuarioAsync(UsuarioCrear usuario, string passwordHash);
     Task ActualizarUsuarioAsync(int id, UsuarioActualizar usuario);
+    Task DesbloquearUsuarioAsync(int id);
 
     Task<IEnumerable<RolListItem>> ListarRolesAsync();
+    Task ActualizarRolModulosAsync(int idRol, IEnumerable<string> modulos);
     Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
         string? estado,
         DateTime? fechaDesde,

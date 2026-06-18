@@ -1,5 +1,6 @@
 using filasur.api.Extensions;
 using filasur.api.Models;
+using filasur.api.Security;
 using filasur.application.Interfaces;
 using filasur.domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize]
+[Authorize(Roles = AppRoles.GestionEvaluaciones)]
 [ApiController]
 [Route("api/evaluaciones")]
 public class EvaluacionesController : ControllerBase
@@ -36,6 +37,16 @@ public class EvaluacionesController : ControllerBase
     {
         var data = await _criterioService.ListarAsync();
         return Ok(ApiResult<IEnumerable<CriterioListItem>>.Ok(data));
+    }
+
+    [HttpGet("{id:int}/borrador")]
+    public async Task<ActionResult<ApiResult<EvaluacionBorradorDetalle>>> ObtenerBorrador(int id)
+    {
+        var data = await _service.ObtenerBorradorAsync(id);
+        if (data is null)
+            return NotFound(ApiResult<EvaluacionBorradorDetalle>.Fail("Borrador no encontrado"));
+
+        return Ok(ApiResult<EvaluacionBorradorDetalle>.Ok(data));
     }
 
     [HttpPost("borrador")]

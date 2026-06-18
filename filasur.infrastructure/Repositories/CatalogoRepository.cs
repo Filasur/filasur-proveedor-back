@@ -159,6 +159,20 @@ public class CatalogoRepository : ICatalogoRepository
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task DesbloquearUsuarioAsync(int id)
+    {
+        using var conn = _factory.CreateConnection();
+        await conn.ExecuteAsync(
+            """
+            UPDATE dbo.Usuario
+            SET IntentosFallidos = 0,
+                BloqueadoHasta = NULL,
+                FechaModificacion = SYSUTCDATETIME()
+            WHERE IdUsuario = @IdUsuario
+            """,
+            new { IdUsuario = id });
+    }
+
     public async Task<IEnumerable<RolListItem>> ListarRolesAsync()
     {
         using var conn = _factory.CreateConnection();
@@ -176,6 +190,42 @@ public class CatalogoRepository : ICatalogoRepository
             Descripcion = r.Descripcion,
             Modulos = modulos.Where(m => m.IdRol == r.Id).Select(m => m.Modulo).ToList()
         }).ToList();
+    }
+
+    public async Task ActualizarRolModulosAsync(int idRol, IEnumerable<string> modulos)
+    {
+        var modulosNormalizados = modulos
+            .Select(m => m.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        using var conn = _factory.CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        try
+        {
+            await conn.ExecuteAsync(
+                "DELETE FROM dbo.RolModulo WHERE IdRol = @IdRol",
+                new { IdRol = idRol },
+                tx);
+
+            foreach (var modulo in modulosNormalizados)
+            {
+                await conn.ExecuteAsync(
+                    "INSERT INTO dbo.RolModulo (IdRol, Modulo) VALUES (@IdRol, @Modulo)",
+                    new { IdRol = idRol, Modulo = modulo },
+                    tx);
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     public async Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(

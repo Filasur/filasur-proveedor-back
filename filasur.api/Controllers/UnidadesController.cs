@@ -1,4 +1,5 @@
 using filasur.api.Models;
+using filasur.api.Security;
 using filasur.application.Interfaces;
 using filasur.domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<UnidadMedidaItem>>>> Listar()
     {
         var data = await _service.ListarUnidadesAsync();
@@ -26,6 +28,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = AppRoles.Catalogos)]
     public async Task<ActionResult<ApiResult<UnidadMedidaItem>>> Crear([FromBody] UnidadMedidaGuardar request)
     {
         var data = await _service.RegistrarUnidadAsync(request);
@@ -33,6 +36,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = AppRoles.Catalogos)]
     public async Task<ActionResult<ApiResult<UnidadMedidaItem>>> Actualizar(int id, [FromBody] UnidadMedidaGuardar request)
     {
         var data = await _service.ActualizarUnidadAsync(id, request);

@@ -99,8 +99,20 @@ public class CatalogoService : ICatalogoService
         return (await _repository.ObtenerUsuarioAsync(id))!;
     }
 
+    public async Task<UsuarioListItem> DesbloquearUsuarioAsync(int id)
+    {
+        await _repository.DesbloquearUsuarioAsync(id);
+        return (await _repository.ObtenerUsuarioAsync(id))!;
+    }
+
     public Task<IEnumerable<RolListItem>> ListarRolesAsync() =>
         _repository.ListarRolesAsync();
+
+    public async Task<RolListItem> ActualizarRolModulosAsync(int id, RolActualizarModulos request)
+    {
+        await _repository.ActualizarRolModulosAsync(id, request.Modulos);
+        return (await _repository.ListarRolesAsync()).First(r => r.Id == id);
+    }
 
     public Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
         string? estado,

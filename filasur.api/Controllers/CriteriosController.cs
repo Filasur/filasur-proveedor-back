@@ -1,4 +1,5 @@
 using filasur.api.Models;
+using filasur.api.Security;
 using filasur.application.Interfaces;
 using filasur.domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ public class CriteriosController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<CriterioListItem>>>> Listar()
     {
         var data = await _service.ListarAsync();
@@ -26,6 +28,7 @@ public class CriteriosController : ControllerBase
     }
 
     [HttpPut]
+    [Authorize(Roles = AppRoles.Catalogos)]
     public async Task<ActionResult<ApiResult<IEnumerable<CriterioListItem>>>> Guardar(
         [FromBody] List<CriterioGuardarItem> lista)
     {

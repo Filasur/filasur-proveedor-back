@@ -21,6 +21,9 @@ public class EvaluacionService : IEvaluacionService
         return items;
     }
 
+    public Task<EvaluacionBorradorDetalle?> ObtenerBorradorAsync(int id) =>
+        _repository.ObtenerBorradorAsync(id);
+
     public Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario) =>
         _repository.GuardarBorradorAsync(request, idUsuario);
 
