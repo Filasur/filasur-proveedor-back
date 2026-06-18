@@ -25,6 +25,45 @@ public class EvaluacionRepository : IEvaluacionRepository
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task<EvaluacionBorradorDetalle?> ObtenerBorradorAsync(int idEvaluacion)
+    {
+        using var conn = _factory.CreateConnection();
+        const string sqlCabecera = """
+            SELECT
+                e.IdEvaluacion AS Id,
+                e.IdProveedor AS ProveedorId,
+                e.Periodo,
+                e.IdProducto,
+                e.OrdenCompra,
+                e.FechaLimite,
+                e.Observaciones
+            FROM dbo.Evaluacion e
+            INNER JOIN dbo.CatEstadoEvaluacion ce ON ce.IdEstadoEvaluacion = e.IdEstadoEvaluacion
+            WHERE e.IdEvaluacion = @IdEvaluacion
+              AND ce.Codigo IN (N'EN_PROCESO', N'EN_EVALUACION')
+            """;
+
+        var borrador = await conn.QueryFirstOrDefaultAsync<EvaluacionBorradorDetalle>(
+            sqlCabecera,
+            new { IdEvaluacion = idEvaluacion });
+
+        if (borrador is null)
+            return null;
+
+        const string sqlPuntajes = """
+            SELECT IdCriterio, Puntaje
+            FROM dbo.EvaluacionCriterio
+            WHERE IdEvaluacion = @IdEvaluacion
+            """;
+
+        var puntajes = await conn.QueryAsync<CriterioPuntaje>(
+            sqlPuntajes,
+            new { IdEvaluacion = idEvaluacion });
+
+        borrador.Puntajes = puntajes.ToDictionary(p => p.IdCriterio.ToString(), p => p.Puntaje);
+        return borrador;
+    }
+
     public async Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario)
     {
         using var conn = _factory.CreateConnection();
@@ -32,23 +71,53 @@ public class EvaluacionRepository : IEvaluacionRepository
         using var tx = conn.BeginTransaction();
         try
         {
-            var p = new DynamicParameters();
-            p.Add("@IdProveedor", request.ProveedorId);
-            p.Add("@Periodo", request.Periodo);
-            p.Add("@IdProducto", request.IdProducto);
-            p.Add("@OrdenCompra", request.OrdenCompra);
-            p.Add("@FechaLimite", request.FechaLimite);
-            p.Add("@Observaciones", request.Observaciones);
-            p.Add("@IdUsuarioCreador", idUsuario);
-            p.Add("@IdEvaluacion", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            var idEvaluacion = request.Id.GetValueOrDefault();
+            if (idEvaluacion > 0)
+            {
+                await conn.ExecuteAsync(
+                    """
+                    UPDATE dbo.Evaluacion
+                    SET IdProveedor = @IdProveedor,
+                        Periodo = @Periodo,
+                        IdProducto = @IdProducto,
+                        OrdenCompra = @OrdenCompra,
+                        FechaLimite = @FechaLimite,
+                        Observaciones = @Observaciones,
+                        FechaModificacion = SYSUTCDATETIME()
+                    WHERE IdEvaluacion = @IdEvaluacion
+                    """,
+                    new
+                    {
+                        IdEvaluacion = idEvaluacion,
+                        IdProveedor = request.ProveedorId,
+                        request.Periodo,
+                        request.IdProducto,
+                        request.OrdenCompra,
+                        request.FechaLimite,
+                        request.Observaciones
+                    },
+                    tx);
+            }
+            else
+            {
+                var p = new DynamicParameters();
+                p.Add("@IdProveedor", request.ProveedorId);
+                p.Add("@Periodo", request.Periodo);
+                p.Add("@IdProducto", request.IdProducto);
+                p.Add("@OrdenCompra", request.OrdenCompra);
+                p.Add("@FechaLimite", request.FechaLimite);
+                p.Add("@Observaciones", request.Observaciones);
+                p.Add("@IdUsuarioCreador", idUsuario);
+                p.Add("@IdEvaluacion", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            await conn.ExecuteAsync(
-                "dbo.sp_Evaluacion_GuardarBorrador",
-                p,
-                tx,
-                commandType: CommandType.StoredProcedure);
+                await conn.ExecuteAsync(
+                    "dbo.sp_Evaluacion_GuardarBorrador",
+                    p,
+                    tx,
+                    commandType: CommandType.StoredProcedure);
 
-            var idEvaluacion = p.Get<int>("@IdEvaluacion");
+                idEvaluacion = p.Get<int>("@IdEvaluacion");
+            }
 
             if (request.Puntajes.Count > 0)
             {

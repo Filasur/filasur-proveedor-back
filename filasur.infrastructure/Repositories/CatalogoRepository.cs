@@ -178,6 +178,42 @@ public class CatalogoRepository : ICatalogoRepository
         }).ToList();
     }
 
+    public async Task ActualizarRolModulosAsync(int idRol, IEnumerable<string> modulos)
+    {
+        var modulosNormalizados = modulos
+            .Select(m => m.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        using var conn = _factory.CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        try
+        {
+            await conn.ExecuteAsync(
+                "DELETE FROM dbo.RolModulo WHERE IdRol = @IdRol",
+                new { IdRol = idRol },
+                tx);
+
+            foreach (var modulo in modulosNormalizados)
+            {
+                await conn.ExecuteAsync(
+                    "INSERT INTO dbo.RolModulo (IdRol, Modulo) VALUES (@IdRol, @Modulo)",
+                    new { IdRol = idRol, Modulo = modulo },
+                    tx);
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
     public async Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
         string? estado,
         DateTime? fechaDesde,

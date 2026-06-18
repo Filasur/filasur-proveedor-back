@@ -20,6 +20,7 @@ public interface ICatalogoRepository
     Task ActualizarUsuarioAsync(int id, UsuarioActualizar usuario);
 
     Task<IEnumerable<RolListItem>> ListarRolesAsync();
+    Task ActualizarRolModulosAsync(int idRol, IEnumerable<string> modulos);
     Task<ReporteEvaluaciones> ObtenerReporteEvaluacionesAsync(
         string? estado,
         DateTime? fechaDesde,

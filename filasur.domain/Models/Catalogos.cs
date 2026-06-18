@@ -66,6 +66,11 @@ public class RolListItem
     public List<string> Modulos { get; set; } = [];
 }
 
+public class RolActualizarModulos
+{
+    public List<string> Modulos { get; set; } = [];
+}
+
 public class ReporteEvaluaciones
 {
     public int Total { get; set; }

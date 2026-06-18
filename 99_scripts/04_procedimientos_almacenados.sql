@@ -912,13 +912,14 @@ BEGIN
         RETURN;
     END
 
-    INSERT INTO dbo.Usuario (IdRol, NombreCompleto, Email, PasswordHash, Iniciales, IdEstadoUsuario)
+    INSERT INTO dbo.Usuario (IdRol, NombreCompleto, Email, PasswordHash, Iniciales, IdEstadoUsuario, DebeCambiarPassword)
     VALUES (
         @IdRol,
         @NombreCompleto,
         @Email,
         @PasswordHash,
         UPPER(LEFT(@NombreCompleto, 1)) + ISNULL(UPPER(SUBSTRING(@NombreCompleto, CHARINDEX(N' ', @NombreCompleto) + 1, 1)), N''),
+        1,
         1
     );
 

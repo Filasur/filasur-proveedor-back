@@ -7,6 +7,7 @@ public class UsuarioLogin
     public string Email { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
     public string Iniciales { get; set; } = string.Empty;
+    public bool DebeCambiarPassword { get; set; }
 }
 
 public class UsuarioCredencial
@@ -17,4 +18,7 @@ public class UsuarioCredencial
     public string Rol { get; set; } = string.Empty;
     public string Iniciales { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    public int IntentosFallidos { get; set; }
+    public DateTime? BloqueadoHasta { get; set; }
+    public bool DebeCambiarPassword { get; set; }
 }
