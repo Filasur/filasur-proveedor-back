@@ -59,11 +59,14 @@ public class ProveedorRepository : IProveedorRepository
             Documentos = documentos.Select(d => new DocumentoListItem
             {
                 Id = d.Id,
+                IdProveedor = d.IdProveedor,
                 Proveedor = d.Proveedor,
                 Nombre = d.Nombre,
                 Tipo = d.Tipo,
+                Categoria = d.Categoria,
                 Tamano = FormatearTamano(d.TamanoBytes),
                 Fecha = d.Fecha,
+                FechaVencimiento = d.FechaVencimiento,
                 Ruta = d.Ruta
             }).ToList(),
             Historial = historial
@@ -141,11 +144,14 @@ public class ProveedorRepository : IProveedorRepository
     private sealed class DocumentoListRow
     {
         public int Id { get; set; }
+        public int IdProveedor { get; set; }
         public string Proveedor { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public string Tipo { get; set; } = string.Empty;
+        public string? Categoria { get; set; }
         public long? TamanoBytes { get; set; }
         public string? Ruta { get; set; }
         public string Fecha { get; set; } = string.Empty;
+        public string? FechaVencimiento { get; set; }
     }
 }

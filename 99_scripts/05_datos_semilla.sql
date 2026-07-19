@@ -50,6 +50,7 @@ CROSS APPLY (VALUES
     (N'Compras', N'Proveedores'),
     (N'Compras', N'Evaluaciones'),
     (N'Compras', N'Reportes'),
+    (N'Compras', N'Documentos'),
     (N'Calidad', N'Evaluaciones'),
     (N'Calidad', N'Criterios'),
     (N'Logística', N'Evaluaciones'),

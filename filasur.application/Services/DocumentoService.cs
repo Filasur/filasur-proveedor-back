@@ -45,4 +45,19 @@ public class DocumentoService : IDocumentoService
 
     public Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento) =>
         _documentos.ObtenerArchivoAsync(idDocumento);
+
+    public async Task<DocumentoArchivo?> EliminarAsync(int idDocumento, int idUsuario)
+    {
+        var eliminado = await _documentos.EliminarAsync(idDocumento);
+        if (eliminado is null)
+            return null;
+
+        await _bitacora.RegistrarAsync(
+            idUsuario,
+            "Documentos",
+            "Documento eliminado",
+            $"Archivo '{eliminado.NombreArchivo}' (Id={idDocumento})");
+
+        return eliminado;
+    }
 }

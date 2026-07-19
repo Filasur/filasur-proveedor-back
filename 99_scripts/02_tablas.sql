@@ -155,7 +155,9 @@ CREATE TABLE dbo.DocumentoProveedor (
     TipoArchivo         NVARCHAR(20)    NOT NULL,
     TamanoBytes         BIGINT          NULL,
     RutaAlmacenamiento  NVARCHAR(500)   NULL,
+    CategoriaDocumento  NVARCHAR(80)    NULL,
     FechaCarga          DATE            NOT NULL CONSTRAINT DF_Documento_FechaCarga DEFAULT (CAST(SYSUTCDATETIME() AS DATE)),
+    FechaVencimiento    DATE            NULL,
     CONSTRAINT PK_DocumentoProveedor PRIMARY KEY CLUSTERED (IdDocumento),
     CONSTRAINT FK_DocumentoProveedor_Proveedor FOREIGN KEY (IdProveedor) REFERENCES dbo.Proveedor (IdProveedor)
 );

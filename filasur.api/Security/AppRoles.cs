@@ -12,5 +12,5 @@ public static class AppRoles
     public const string GestionEvaluaciones = $"{Administrador},{Compras},{Calidad},{Logistica}";
     public const string Reportes = $"{Administrador},{Compras}";
     public const string Catalogos = $"{Administrador},{Compras}";
-    public const string Documentos = $"{Administrador},{Logistica}";
+    public const string Documentos = $"{Administrador},{Compras},{Logistica}";
 }

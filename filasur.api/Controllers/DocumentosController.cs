@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.Documentos)]
+[Authorize]
 [ApiController]
 [Route("api")]
 public class DocumentosController : ControllerBase
@@ -16,6 +16,15 @@ public class DocumentosController : ControllerBase
     private static readonly HashSet<string> ExtensionesPermitidas = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"
+    };
+
+    private static readonly HashSet<string> CategoriasPermitidas = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Ficha técnica",
+        "Certificado",
+        "RUC / Constancia",
+        "Contrato",
+        "Otro"
     };
 
     private readonly IDocumentoService _documentoService;
@@ -28,6 +37,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpGet("documentos")]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<DocumentoListItem>>>> Listar(
         [FromQuery] int? proveedorId,
         [FromQuery] string? q)
@@ -36,14 +46,28 @@ public class DocumentosController : ControllerBase
         return Ok(ApiResult<IEnumerable<DocumentoListItem>>.Ok(data));
     }
 
+    [HttpGet("documentos/categorias")]
+    [Authorize(Roles = AppRoles.GestionProveedores)]
+    public ActionResult<ApiResult<IEnumerable<string>>> Categorias()
+    {
+        return Ok(ApiResult<IEnumerable<string>>.Ok(CategoriasPermitidas.OrderBy(c => c)));
+    }
+
     [HttpPost("proveedores/{idProveedor:int}/documentos")]
+    [Authorize(Roles = AppRoles.GestionProveedores)]
     [RequestSizeLimit(52_428_800)]
     public async Task<ActionResult<ApiResult<object>>> SubirProveedor(
         int idProveedor,
-        [FromForm] List<IFormFile>? archivos)
+        [FromForm] List<IFormFile>? archivos,
+        [FromForm] string? categoria,
+        [FromForm] DateTime? fechaVencimiento)
     {
         if (archivos is null || archivos.Count == 0)
             return Ok(ApiResult<object>.Ok(new { ids = Array.Empty<int>() }));
+
+        var categoriaNorm = NormalizarCategoria(categoria);
+        if (!string.IsNullOrWhiteSpace(categoria) && categoriaNorm is null)
+            return BadRequest(ApiResult<object>.Fail("Categoría documental no válida."));
 
         var registros = new List<DocumentoRegistro>();
         var carpetaRelativa = Path.Combine("proveedores", idProveedor.ToString());
@@ -73,7 +97,9 @@ public class DocumentosController : ControllerBase
                 NombreArchivo = archivo.FileName,
                 TipoArchivo = extension.TrimStart('.').ToUpperInvariant(),
                 TamanoBytes = archivo.Length,
-                RutaAlmacenamiento = rutaRelativa
+                RutaAlmacenamiento = rutaRelativa,
+                CategoriaDocumento = categoriaNorm,
+                FechaVencimiento = fechaVencimiento?.Date
             });
         }
 
@@ -89,6 +115,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpGet("documentos/{id:int}/descargar")]
+    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
     public async Task<IActionResult> Descargar(int id)
     {
         var meta = await _documentoService.ObtenerArchivoAsync(id);
@@ -101,6 +128,37 @@ public class DocumentosController : ControllerBase
 
         var contentType = ObtenerContentType(meta.NombreArchivo);
         return PhysicalFile(rutaFisica, contentType, meta.NombreArchivo);
+    }
+
+    [HttpDelete("documentos/{id:int}")]
+    [Authorize(Roles = AppRoles.GestionProveedores)]
+    public async Task<ActionResult<ApiResult<object>>> Eliminar(int id)
+    {
+        var eliminado = await _documentoService.EliminarAsync(id, User.GetUserId());
+        if (eliminado is null)
+            return NotFound(ApiResult<object>.Fail("Documento no encontrado."));
+
+        if (!string.IsNullOrWhiteSpace(eliminado.RutaAlmacenamiento))
+        {
+            var rutaFisica = Path.Combine(
+                _env.ContentRootPath,
+                "uploads",
+                eliminado.RutaAlmacenamiento.Replace('/', Path.DirectorySeparatorChar));
+
+            if (System.IO.File.Exists(rutaFisica))
+                System.IO.File.Delete(rutaFisica);
+        }
+
+        return Ok(ApiResult<object>.Ok(new { id }));
+    }
+
+    private static string? NormalizarCategoria(string? categoria)
+    {
+        if (string.IsNullOrWhiteSpace(categoria))
+            return null;
+
+        return CategoriasPermitidas.FirstOrDefault(c =>
+            string.Equals(c, categoria.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static string ObtenerContentType(string nombreArchivo)

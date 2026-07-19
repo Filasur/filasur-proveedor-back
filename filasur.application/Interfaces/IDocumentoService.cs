@@ -10,4 +10,5 @@ public interface IDocumentoService
         IEnumerable<DocumentoRegistro> documentos,
         int idUsuario);
     Task<DocumentoArchivo?> ObtenerArchivoAsync(int idDocumento);
+    Task<DocumentoArchivo?> EliminarAsync(int idDocumento, int idUsuario);
 }
