@@ -5,6 +5,7 @@ using filasur.application.Interfaces;
 using filasur.domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 
 namespace filasur.api.Controllers;
 
@@ -28,12 +29,12 @@ public class DocumentosController : ControllerBase
     };
 
     private readonly IDocumentoService _documentoService;
-    private readonly IWebHostEnvironment _env;
+    private readonly AppStorageOptions _storage;
 
-    public DocumentosController(IDocumentoService documentoService, IWebHostEnvironment env)
+    public DocumentosController(IDocumentoService documentoService, AppStorageOptions storage)
     {
         _documentoService = documentoService;
-        _env = env;
+        _storage = storage;
     }
 
     [HttpGet("documentos")]
@@ -56,11 +57,12 @@ public class DocumentosController : ControllerBase
     [HttpPost("proveedores/{idProveedor:int}/documentos")]
     [Authorize(Roles = AppRoles.GestionProveedores)]
     [RequestSizeLimit(52_428_800)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 52_428_800)]
     public async Task<ActionResult<ApiResult<object>>> SubirProveedor(
         int idProveedor,
         [FromForm] List<IFormFile>? archivos,
         [FromForm] string? categoria,
-        [FromForm] DateTime? fechaVencimiento)
+        [FromForm] string? fechaVencimiento)
     {
         if (archivos is null || archivos.Count == 0)
             return Ok(ApiResult<object>.Ok(new { ids = Array.Empty<int>() }));
@@ -69,49 +71,88 @@ public class DocumentosController : ControllerBase
         if (!string.IsNullOrWhiteSpace(categoria) && categoriaNorm is null)
             return BadRequest(ApiResult<object>.Fail("Categoría documental no válida."));
 
-        var registros = new List<DocumentoRegistro>();
-        var carpetaRelativa = Path.Combine("proveedores", idProveedor.ToString());
-        var carpetaFisica = Path.Combine(_env.ContentRootPath, "uploads", carpetaRelativa);
-        Directory.CreateDirectory(carpetaFisica);
-
-        foreach (var archivo in archivos)
+        DateTime? fechaVenc = null;
+        if (!string.IsNullOrWhiteSpace(fechaVencimiento))
         {
-            if (archivo.Length == 0)
-                continue;
-
-            var extension = Path.GetExtension(archivo.FileName);
-            if (string.IsNullOrEmpty(extension) || !ExtensionesPermitidas.Contains(extension))
-                return BadRequest(ApiResult<object>.Fail($"Tipo de archivo no permitido: {archivo.FileName}"));
-
-            var nombreSeguro = $"{Guid.NewGuid():N}_{Path.GetFileName(archivo.FileName)}";
-            var rutaRelativa = Path.Combine(carpetaRelativa, nombreSeguro).Replace('\\', '/');
-            var rutaFisica = Path.Combine(carpetaFisica, nombreSeguro);
-
-            await using (var stream = new FileStream(rutaFisica, FileMode.Create))
-            {
-                await archivo.CopyToAsync(stream);
-            }
-
-            registros.Add(new DocumentoRegistro
-            {
-                NombreArchivo = archivo.FileName,
-                TipoArchivo = extension.TrimStart('.').ToUpperInvariant(),
-                TamanoBytes = archivo.Length,
-                RutaAlmacenamiento = rutaRelativa,
-                CategoriaDocumento = categoriaNorm,
-                FechaVencimiento = fechaVencimiento?.Date
-            });
+            if (!DateTime.TryParse(fechaVencimiento, out var parsed))
+                return BadRequest(ApiResult<object>.Fail("Fecha de vencimiento no válida."));
+            fechaVenc = parsed.Date;
         }
 
-        if (registros.Count == 0)
-            return BadRequest(ApiResult<object>.Fail("No se recibieron archivos válidos."));
+        var registros = new List<DocumentoRegistro>();
+        var rutasFisicas = new List<string>();
+        var carpetaRelativa = Path.Combine("proveedores", idProveedor.ToString());
+        var carpetaFisica = Path.Combine(_storage.UploadsPath, carpetaRelativa);
 
-        var ids = await _documentoService.RegistrarProveedorAsync(
-            idProveedor,
-            registros,
-            User.GetUserId());
+        try
+        {
+            Directory.CreateDirectory(carpetaFisica);
 
-        return Ok(ApiResult<object>.Ok(new { ids }));
+            foreach (var archivo in archivos)
+            {
+                if (archivo.Length == 0)
+                    continue;
+
+                var extension = Path.GetExtension(archivo.FileName);
+                if (string.IsNullOrEmpty(extension) || !ExtensionesPermitidas.Contains(extension))
+                    return BadRequest(ApiResult<object>.Fail($"Tipo de archivo no permitido: {archivo.FileName}"));
+
+                var nombreSeguro = $"{Guid.NewGuid():N}_{Path.GetFileName(archivo.FileName)}";
+                var rutaRelativa = Path.Combine(carpetaRelativa, nombreSeguro).Replace('\\', '/');
+                var rutaFisica = Path.Combine(carpetaFisica, nombreSeguro);
+
+                await using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                {
+                    await archivo.CopyToAsync(stream);
+                }
+
+                rutasFisicas.Add(rutaFisica);
+                registros.Add(new DocumentoRegistro
+                {
+                    NombreArchivo = archivo.FileName,
+                    TipoArchivo = extension.TrimStart('.').ToUpperInvariant(),
+                    TamanoBytes = archivo.Length,
+                    RutaAlmacenamiento = rutaRelativa,
+                    CategoriaDocumento = categoriaNorm,
+                    FechaVencimiento = fechaVenc
+                });
+            }
+
+            if (registros.Count == 0)
+                return BadRequest(ApiResult<object>.Fail("No se recibieron archivos válidos."));
+
+            var ids = await _documentoService.RegistrarProveedorAsync(
+                idProveedor,
+                registros,
+                User.GetUserId());
+
+            return Ok(ApiResult<object>.Ok(new { ids }));
+        }
+        catch (SqlException ex)
+        {
+            CleanupFiles(rutasFisicas);
+            var msg = ex.Message.Contains("CategoriaDocumento", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("FechaVencimiento", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("too many arguments", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("demasiados argumentos", StringComparison.OrdinalIgnoreCase)
+                ? "La base de datos no tiene actualizada la gestión documental. Ejecute el script 08_documentos_gestion.sql."
+                : $"Error al registrar documentos: {ex.Message}";
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResult<object>.Fail(msg));
+        }
+        catch (IOException ex)
+        {
+            CleanupFiles(rutasFisicas);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResult<object>.Fail($"No se pudo guardar el archivo en el servidor: {ex.Message}"));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            CleanupFiles(rutasFisicas);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ApiResult<object>.Fail($"Sin permiso para guardar archivos en el servidor: {ex.Message}"));
+        }
     }
 
     [HttpGet("documentos/{id:int}/descargar")]
@@ -122,7 +163,9 @@ public class DocumentosController : ControllerBase
         if (meta is null || string.IsNullOrWhiteSpace(meta.RutaAlmacenamiento))
             return NotFound();
 
-        var rutaFisica = Path.Combine(_env.ContentRootPath, "uploads", meta.RutaAlmacenamiento.Replace('/', Path.DirectorySeparatorChar));
+        var rutaFisica = Path.Combine(
+            _storage.UploadsPath,
+            meta.RutaAlmacenamiento.Replace('/', Path.DirectorySeparatorChar));
         if (!System.IO.File.Exists(rutaFisica))
             return NotFound();
 
@@ -141,8 +184,7 @@ public class DocumentosController : ControllerBase
         if (!string.IsNullOrWhiteSpace(eliminado.RutaAlmacenamiento))
         {
             var rutaFisica = Path.Combine(
-                _env.ContentRootPath,
-                "uploads",
+                _storage.UploadsPath,
                 eliminado.RutaAlmacenamiento.Replace('/', Path.DirectorySeparatorChar));
 
             if (System.IO.File.Exists(rutaFisica))
@@ -150,6 +192,22 @@ public class DocumentosController : ControllerBase
         }
 
         return Ok(ApiResult<object>.Ok(new { id }));
+    }
+
+    private static void CleanupFiles(IEnumerable<string> rutas)
+    {
+        foreach (var ruta in rutas)
+        {
+            try
+            {
+                if (System.IO.File.Exists(ruta))
+                    System.IO.File.Delete(ruta);
+            }
+            catch
+            {
+                // best-effort
+            }
+        }
     }
 
     private static string? NormalizarCategoria(string? categoria)

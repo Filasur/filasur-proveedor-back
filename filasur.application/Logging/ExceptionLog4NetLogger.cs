@@ -38,13 +38,20 @@ public sealed class ExceptionLog4NetLogger : IExceptionLogger
 
     public void Log(Exception exception, string? context = null)
     {
-        if (_log is null)
-            return;
+        try
+        {
+            if (_log is null)
+                return;
 
-        var message = string.IsNullOrWhiteSpace(context)
-            ? "Excepción en servicio"
-            : $"Excepción en servicio. Contexto: {context}";
+            var message = string.IsNullOrWhiteSpace(context)
+                ? "Excepción en servicio"
+                : $"Excepción en servicio. Contexto: {context}";
 
-        _log.Error(message, exception);
+            _log.Error(message, exception);
+        }
+        catch
+        {
+            // Evitar que un fallo de I/O en logs tumbe la respuesta HTTP.
+        }
     }
 }

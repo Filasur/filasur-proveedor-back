@@ -1,3 +1,4 @@
+using filasur.api;
 using filasur.api.Middleware;
 using filasur.application.Interfaces;
 using filasur.application.Logging;
@@ -6,6 +7,7 @@ using filasur.domain.Interfaces;
 using filasur.infrastructure.Data;
 using filasur.infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -13,6 +15,20 @@ using System.Text;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var storage = AppStorageOptions.CreateDefault(builder.Environment, builder.Configuration);
+builder.Services.AddSingleton(storage);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 52_428_800;
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52_428_800;
+    options.ValueLengthLimit = 52_428_800;
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
@@ -101,9 +117,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-var logDirectory = Path.Combine(builder.Environment.ContentRootPath, "log");
-Directory.CreateDirectory(logDirectory);
-builder.Services.AddSingleton<IExceptionLogger>(_ => new ExceptionLog4NetLogger(logDirectory));
+builder.Services.AddSingleton<IExceptionLogger>(_ => new ExceptionLog4NetLogger(storage.LogPath));
 
 var app = builder.Build();
 
@@ -120,11 +134,9 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseMiddleware<ExceptionLoggingMiddleware>();
 
-var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
-Directory.CreateDirectory(uploadsPath);
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(uploadsPath),
+    FileProvider = new PhysicalFileProvider(storage.UploadsPath),
     RequestPath = "/uploads"
 });
 

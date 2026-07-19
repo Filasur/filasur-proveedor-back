@@ -21,10 +21,18 @@ public class ExceptionLoggingMiddleware
         catch (Exception ex)
         {
             var path = context.Request.Path.HasValue ? context.Request.Path.Value : "/";
-            exceptionLogger.Log(ex, $"{context.Request.Method} {path}");
+
+            try
+            {
+                exceptionLogger.Log(ex, $"{context.Request.Method} {path}");
+            }
+            catch
+            {
+                // No impedir la respuesta JSON si falla el logger (p. ej. disco no escribible).
+            }
 
             if (context.Response.HasStarted)
-                throw;
+                return;
 
             context.Response.Clear();
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
