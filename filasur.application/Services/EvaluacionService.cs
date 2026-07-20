@@ -29,9 +29,26 @@ public class EvaluacionService : IEvaluacionService
 
     public async Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? proveedorId, string? estado, bool? pendientes)
     {
-        var items = await _repository.ListarAsync(proveedorId, estado);
+        var items = (await _repository.ListarAsync(proveedorId, estado)).ToList();
+        var criteriosActivos = (await _criterios.ListarAsync())
+            .Where(c => c.Activo)
+            .Select(c => (c.Id, c.Area))
+            .ToList();
+
+        foreach (var item in items)
+        {
+            if (!EsEstadoEditable(item.Estado))
+                continue;
+
+            var borrador = await _repository.ObtenerBorradorAsync(item.Id);
+            var puntajes = borrador?.Puntajes ?? new Dictionary<string, decimal>();
+            item.RolTurno = AreaEvaluacionRoles.FaseActual(criteriosActivos, puntajes);
+            if (item.RolTurno is not null)
+                item.AreasPendientes = Math.Max(item.AreasPendientes, 1);
+        }
+
         if (pendientes == true)
-            return items.Where(e => e.AreasPendientes > 0);
+            return items.Where(e => e.RolTurno is not null || e.AreasPendientes > 0);
         return items;
     }
 
@@ -42,6 +59,37 @@ public class EvaluacionService : IEvaluacionService
     {
         var criterios = (await _criterios.ListarAsync()).ToList();
         var porId = criterios.ToDictionary(c => c.Id);
+        var criteriosActivos = criterios.Where(c => c.Activo).Select(c => (c.Id, c.Area)).ToList();
+
+        if (request.Id is null or <= 0 && !AreaEvaluacionRoles.PuedeIniciarEvaluacion(rolUsuario))
+        {
+            throw new UnauthorizedAccessException(
+                "Solo Calidad (o Administrador) puede iniciar una evaluación nueva. "
+                + "Compras y Logística deben continuar desde Evaluaciones pendientes cuando sea su turno.");
+        }
+
+        var existentes = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        if (request.Id is > 0)
+        {
+            var borrador = await _repository.ObtenerBorradorAsync(request.Id.Value);
+            if (borrador?.Puntajes is not null)
+            {
+                foreach (var kv in borrador.Puntajes)
+                    existentes[kv.Key] = kv.Value;
+            }
+        }
+
+        if (!AreaEvaluacionRoles.EsAdministrador(rolUsuario)
+            && request.Puntajes.Count > 0
+            && !AreaEvaluacionRoles.EsTurnoDelRol(rolUsuario, criteriosActivos, existentes))
+        {
+            var turno = AreaEvaluacionRoles.FaseActual(criteriosActivos, existentes);
+            throw new UnauthorizedAccessException(
+                turno is null
+                    ? "La evaluación ya tiene todos los puntajes."
+                    : $"Aún no es su turno. Debe completar primero la fase de «{turno}» "
+                      + "(orden: Calidad → Compras → Logística).");
+        }
 
         var puntajesFiltrados = new Dictionary<string, decimal>(StringComparer.Ordinal);
         foreach (var kv in request.Puntajes)
@@ -76,6 +124,10 @@ public class EvaluacionService : IEvaluacionService
 
         return await _repository.GuardarBorradorAsync(requestFiltrado, idUsuario);
     }
+
+    private static bool EsEstadoEditable(string? estado) =>
+        string.Equals(estado, "En proceso", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(estado, "En evaluación", StringComparison.OrdinalIgnoreCase);
 
     public Task<EvaluacionConsolidacion?> ObtenerConsolidacionAsync(int id) =>
         _repository.ObtenerConsolidacionAsync(id);

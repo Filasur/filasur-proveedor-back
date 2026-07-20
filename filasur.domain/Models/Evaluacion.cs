@@ -11,6 +11,8 @@ public class EvaluacionListItem
     public decimal? PuntajeFinal { get; set; }
     public string Estado { get; set; } = string.Empty;
     public int AreasPendientes { get; set; }
+    /// <summary>Rol que debe calificar ahora (Calidad → Compras → Logística). Null si ya está completa.</summary>
+    public string? RolTurno { get; set; }
 }
 
 public class EvaluacionBorradorRequest
