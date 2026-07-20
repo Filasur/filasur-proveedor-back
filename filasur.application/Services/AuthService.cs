@@ -135,6 +135,17 @@ public class AuthService : IAuthService
         await _authRepository.ActualizarPasswordAsync(idUsuario, hash, debeCambiarPassword: false);
     }
 
+    public Task LogoutAsync(int idUsuario, string? email, string? rol)
+    {
+        var quien = string.IsNullOrWhiteSpace(email) ? $"Id={idUsuario}" : email;
+        var detalleRol = string.IsNullOrWhiteSpace(rol) ? string.Empty : $" ({rol})";
+        return _bitacora.RegistrarAsync(
+            idUsuario > 0 ? idUsuario : null,
+            "Autenticación",
+            "Cierre de sesión",
+            $"Usuario {quien}{detalleRol} cerró sesión.");
+    }
+
     private string GenerarToken(UsuarioLogin user)
     {
         var jwt = _configuration.GetSection("Jwt");

@@ -18,4 +18,5 @@ public interface IAuthService
     Task<LoginResult?> LoginAsync(string email, string password);
     Task<RecuperarPasswordResult?> RecuperarPasswordAsync(string email);
     Task CambiarPasswordAsync(int idUsuario, string passwordActual, string passwordNueva);
+    Task LogoutAsync(int idUsuario, string? email, string? rol);
 }

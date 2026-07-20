@@ -3,6 +3,7 @@ using filasur.api.Extensions;
 using filasur.application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace filasur.api.Controllers;
 
@@ -49,6 +50,17 @@ public class AuthController : ControllerBase
             message = "Contraseña temporal generada. Cámbiela al iniciar sesión.",
             passwordTemporal = result.PasswordTemporal
         }));
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<ActionResult<ApiResult<object>>> Logout()
+    {
+        await _authService.LogoutAsync(
+            User.GetUserId(),
+            User.FindFirst(ClaimTypes.Email)?.Value,
+            User.FindFirst(ClaimTypes.Role)?.Value);
+        return Ok(ApiResult<object>.Ok(new { message = "Sesión cerrada." }));
     }
 
     [Authorize]

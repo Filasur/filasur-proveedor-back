@@ -29,7 +29,24 @@ public class DashboardRepository : IDashboardRepository
         var recientes = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
         var proximas = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
         var evolucion = (await multi.ReadAsync<DashboardEvolucionMensualItem>()).ToList();
-        var documentos = (await multi.ReadAsync<DashboardDocumentoAlertaItem>()).ToList();
+
+        // 5º result set (documentos por vencer): solo existe tras ejecutar script 11
+        var documentos = new List<DashboardDocumentoAlertaItem>();
+        if (!multi.IsConsumed)
+        {
+            try
+            {
+                documentos = (await multi.ReadAsync<DashboardDocumentoAlertaItem>()).ToList();
+            }
+            catch (ObjectDisposedException)
+            {
+                // SP antiguo sin el result set de documentos
+            }
+            catch (InvalidOperationException)
+            {
+                // "The reader has been disposed" / sin más grids
+            }
+        }
 
         return new DashboardData
         {
