@@ -1,4 +1,5 @@
 using filasur.application.Interfaces;
+using filasur.application.Security;
 using filasur.domain.Interfaces;
 using filasur.domain.Models;
 
@@ -7,10 +8,12 @@ namespace filasur.application.Services;
 public class EvaluacionService : IEvaluacionService
 {
     private readonly IEvaluacionRepository _repository;
+    private readonly ICriterioRepository _criterios;
 
-    public EvaluacionService(IEvaluacionRepository repository)
+    public EvaluacionService(IEvaluacionRepository repository, ICriterioRepository criterios)
     {
         _repository = repository;
+        _criterios = criterios;
     }
 
     public async Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? proveedorId, string? estado, bool? pendientes)
@@ -24,8 +27,44 @@ public class EvaluacionService : IEvaluacionService
     public Task<EvaluacionBorradorDetalle?> ObtenerBorradorAsync(int id) =>
         _repository.ObtenerBorradorAsync(id);
 
-    public Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario) =>
-        _repository.GuardarBorradorAsync(request, idUsuario);
+    public async Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario, string? rolUsuario)
+    {
+        var criterios = (await _criterios.ListarAsync()).ToList();
+        var porId = criterios.ToDictionary(c => c.Id);
+
+        var puntajesFiltrados = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        foreach (var kv in request.Puntajes)
+        {
+            if (!int.TryParse(kv.Key, out var idCriterio) || !porId.TryGetValue(idCriterio, out var criterio))
+                throw new InvalidOperationException($"Criterio inválido: {kv.Key}");
+
+            if (!AreaEvaluacionRoles.PuedeCalificarArea(rolUsuario, criterio.Area))
+            {
+                throw new UnauthorizedAccessException(
+                    $"El rol «{rolUsuario}» no puede calificar el criterio «{criterio.Nombre}» (área {criterio.Area}).");
+            }
+
+            puntajesFiltrados[kv.Key] = kv.Value;
+        }
+
+        var requestFiltrado = new EvaluacionBorradorRequest
+        {
+            Id = request.Id,
+            ProveedorId = request.ProveedorId,
+            Periodo = request.Periodo,
+            IdProducto = request.IdProducto,
+            OrdenCompra = request.OrdenCompra,
+            FechaLimite = request.FechaLimite,
+            Observaciones = request.Observaciones,
+            Puntajes = puntajesFiltrados,
+            Finalizar = request.Finalizar
+        };
+
+        if (request.Finalizar)
+            await ValidarPuntajesCompletosParaFinalizarAsync(requestFiltrado, criterios);
+
+        return await _repository.GuardarBorradorAsync(requestFiltrado, idUsuario);
+    }
 
     public async Task<EvaluacionConsolidacion?> ObtenerConsolidacionAsync(int id)
     {
@@ -38,4 +77,37 @@ public class EvaluacionService : IEvaluacionService
 
     public Task RechazarAsync(int id, int idUsuario, string? motivo) =>
         _repository.RechazarAsync(id, idUsuario, motivo);
+
+    private async Task ValidarPuntajesCompletosParaFinalizarAsync(
+        EvaluacionBorradorRequest request,
+        List<CriterioListItem> criterios)
+    {
+        var activos = criterios.Where(c => c.Activo).ToList();
+        var existentes = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        if (request.Id is > 0)
+        {
+            var borrador = await _repository.ObtenerBorradorAsync(request.Id.Value);
+            if (borrador?.Puntajes is not null)
+            {
+                foreach (var kv in borrador.Puntajes)
+                    existentes[kv.Key] = kv.Value;
+            }
+        }
+
+        foreach (var kv in request.Puntajes)
+            existentes[kv.Key] = kv.Value;
+
+        var faltantes = activos
+            .Where(c => !existentes.ContainsKey(c.Id.ToString()))
+            .Select(c => c.Nombre)
+            .ToList();
+
+        if (faltantes.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"No se puede finalizar: faltan puntajes de {faltantes.Count} criterio(s) " +
+                $"(p. ej. «{faltantes[0]}»). Cada área debe completar los suyos.");
+        }
+    }
 }

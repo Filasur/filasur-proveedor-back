@@ -15,11 +15,16 @@ public class AuthService : IAuthService
 {
     private const int MaxIntentosFallidos = 5;
     private readonly IAuthRepository _authRepository;
+    private readonly IBitacoraRepository _bitacora;
     private readonly IConfiguration _configuration;
 
-    public AuthService(IAuthRepository authRepository, IConfiguration configuration)
+    public AuthService(
+        IAuthRepository authRepository,
+        IBitacoraRepository bitacora,
+        IConfiguration configuration)
     {
         _authRepository = authRepository;
+        _bitacora = bitacora;
         _configuration = configuration;
     }
 
@@ -54,6 +59,12 @@ public class AuthService : IAuthService
             Iniciales = credencial.Iniciales,
             DebeCambiarPassword = credencial.DebeCambiarPassword
         };
+
+        await _bitacora.RegistrarAsync(
+            user.Id,
+            "Autenticación",
+            "Inicio de sesión",
+            $"Usuario {user.Email} ({user.Rol}) inició sesión.");
 
         return new LoginResult { Token = GenerarToken(user), User = user };
     }

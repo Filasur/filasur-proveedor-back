@@ -245,21 +245,30 @@ CREATE OR ALTER PROCEDURE dbo.sp_Evaluacion_GuardarCriterios
 AS
 BEGIN
     SET NOCOUNT ON;
-    /* Requiere OPENJSON (SQL Server 2016+) */
-    DELETE FROM dbo.EvaluacionCriterio WHERE IdEvaluacion = @IdEvaluacion;
-
-    INSERT INTO dbo.EvaluacionCriterio (IdEvaluacion, IdCriterio, Puntaje, PuntajePonderado)
-    SELECT
-        @IdEvaluacion,
-        j.IdCriterio,
-        j.Puntaje,
-        j.Puntaje * c.Peso / 100.0
-    FROM OPENJSON(@CriteriosJson)
-    WITH (
-        IdCriterio INT '$.idCriterio',
-        Puntaje DECIMAL(5, 2) '$.puntaje'
-    ) AS j
-    INNER JOIN dbo.CriterioEvaluacion c ON c.IdCriterio = j.IdCriterio;
+    /* MERGE: permite que cada rol guarde solo sus criterios sin borrar los demás */
+    ;WITH Incoming AS (
+        SELECT
+            j.IdCriterio,
+            j.Puntaje,
+            CAST(j.Puntaje * c.Peso / 100.0 AS DECIMAL(8, 4)) AS PuntajePonderado
+        FROM OPENJSON(@CriteriosJson)
+        WITH (
+            IdCriterio INT '$.idCriterio',
+            Puntaje DECIMAL(5, 2) '$.puntaje'
+        ) AS j
+        INNER JOIN dbo.CriterioEvaluacion c ON c.IdCriterio = j.IdCriterio
+    )
+    MERGE dbo.EvaluacionCriterio AS target
+    USING Incoming AS src
+        ON target.IdEvaluacion = @IdEvaluacion
+       AND target.IdCriterio = src.IdCriterio
+    WHEN MATCHED THEN
+        UPDATE SET
+            Puntaje = src.Puntaje,
+            PuntajePonderado = src.PuntajePonderado
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (IdEvaluacion, IdCriterio, Puntaje, PuntajePonderado)
+        VALUES (@IdEvaluacion, src.IdCriterio, src.Puntaje, src.PuntajePonderado);
 
     UPDATE dbo.Evaluacion
     SET PuntajeFinal = dbo.fn_CalcularPuntajeEvaluacion(@IdEvaluacion),

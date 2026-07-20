@@ -52,8 +52,19 @@ public class EvaluacionesController : ControllerBase
     [HttpPost("borrador")]
     public async Task<ActionResult<ApiResult<object>>> GuardarBorrador([FromBody] EvaluacionBorradorRequest request)
     {
-        var id = await _service.GuardarBorradorAsync(request, User.GetUserId());
-        return Ok(ApiResult<object>.Ok(new { id }));
+        try
+        {
+            var id = await _service.GuardarBorradorAsync(request, User.GetUserId(), User.GetUserRole());
+            return Ok(ApiResult<object>.Ok(new { id }));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResult<object>.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResult<object>.Fail(ex.Message));
+        }
     }
 
     [HttpGet("{id:int}/consolidacion")]
@@ -82,6 +93,7 @@ public class EvaluacionesController : ControllerBase
     }
 
     [HttpPost("{id:int}/aprobar")]
+    [Authorize(Roles = AppRoles.AprobacionEvaluaciones)]
     public async Task<ActionResult<ApiResult<object>>> Aprobar(int id)
     {
         await _service.AprobarAsync(id, User.GetUserId());
@@ -89,6 +101,7 @@ public class EvaluacionesController : ControllerBase
     }
 
     [HttpPost("{id:int}/rechazar")]
+    [Authorize(Roles = AppRoles.AprobacionEvaluaciones)]
     public async Task<ActionResult<ApiResult<object>>> Rechazar(int id, [FromBody] RechazarRequest? request)
     {
         await _service.RechazarAsync(id, User.GetUserId(), request?.Motivo);
