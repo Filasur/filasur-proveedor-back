@@ -79,17 +79,18 @@ BEGIN
 END;
 GO
 
-/* Áreas pendientes: áreas de criterios activos sin fila en EvaluacionArea */
+/* Áreas pendientes: áreas de criterios activos sin fila en EvaluacionArea.
+   No usar PuntajeFinal como señal de cierre: se actualiza en cada guardado parcial. */
 CREATE OR ALTER FUNCTION dbo.fn_ContarAreasPendientes (@IdEvaluacion INT)
 RETURNS INT
 AS
 BEGIN
-    /* Evaluación ya finalizada (criterios consolidados): sin áreas pendientes */
     IF EXISTS (
         SELECT 1
-        FROM dbo.Evaluacion
-        WHERE IdEvaluacion = @IdEvaluacion
-          AND PuntajeFinal IS NOT NULL
+        FROM dbo.Evaluacion e
+        INNER JOIN dbo.CatEstadoEvaluacion ce ON ce.IdEstadoEvaluacion = e.IdEstadoEvaluacion
+        WHERE e.IdEvaluacion = @IdEvaluacion
+          AND ce.Codigo NOT IN (N'EN_PROCESO', N'EN_EVALUACION')
     )
         RETURN 0;
 
