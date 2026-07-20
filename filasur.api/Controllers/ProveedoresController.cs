@@ -21,7 +21,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
+    [AuthorizeModulo(AppModulos.Proveedores, AppModulos.Evaluaciones, AppModulos.Reportes)]
     public async Task<ActionResult<ApiResult<IEnumerable<ProveedorListItem>>>> Listar([FromQuery] string? q)
     {
         var data = await _service.ListarAsync(q);
@@ -29,7 +29,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
+    [AuthorizeModulo(AppModulos.Proveedores, AppModulos.Evaluaciones, AppModulos.Reportes)]
     public async Task<ActionResult<ApiResult<object>>> Obtener(int id)
     {
         var data = await _service.ObtenerAsync(id);
@@ -57,7 +57,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.GestionProveedores)]
+    [AuthorizeModulo(AppModulos.Proveedores)]
     public async Task<ActionResult<ApiResult<object>>> Registrar([FromBody] ProveedorRegistrar request)
     {
         var id = await _service.RegistrarAsync(request, User.GetUserId());
@@ -65,7 +65,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = AppRoles.GestionProveedores)]
+    [AuthorizeModulo(AppModulos.Proveedores)]
     public async Task<ActionResult<ApiResult<object>>> Actualizar(int id, [FromBody] ProveedorActualizar request)
     {
         await _service.ActualizarAsync(id, request, User.GetUserId());

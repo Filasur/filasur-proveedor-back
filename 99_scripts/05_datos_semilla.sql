@@ -56,7 +56,9 @@ CROSS APPLY (VALUES
     (N'Compras', N'Productos'),
     (N'Calidad', N'Evaluaciones'),
     (N'Calidad', N'Criterios'),
+    (N'Logística', N'Proveedores'),
     (N'Logística', N'Evaluaciones'),
+    (N'Logística', N'Reportes'),
     (N'Logística', N'Documentos')
 ) AS m(RolNombre, Modulo)
 WHERE r.Nombre = m.RolNombre;

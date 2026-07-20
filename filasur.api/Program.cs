@@ -1,5 +1,6 @@
 using filasur.api;
 using filasur.api.Middleware;
+using filasur.api.Security;
 using filasur.application.Interfaces;
 using filasur.application.Logging;
 using filasur.application.Options;
@@ -8,6 +9,7 @@ using filasur.domain.Interfaces;
 using filasur.infrastructure.Data;
 using filasur.infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -119,6 +121,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!))
         };
     });
+
+builder.Services.AddSingleton<IAuthorizationHandler, ModuloAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, ModuloPolicyProvider>();
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IExceptionLogger>(_ => new ExceptionLog4NetLogger(storage.LogPath));

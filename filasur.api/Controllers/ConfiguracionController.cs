@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.Administracion)]
+[AuthorizeModulo(AppModulos.Configuracion)]
 [ApiController]
 [Route("api/configuracion")]
 public class ConfiguracionController : ControllerBase

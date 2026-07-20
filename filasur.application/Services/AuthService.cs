@@ -152,14 +152,17 @@ public class AuthService : IAuthService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.Nombre),
-            new Claim(ClaimTypes.Role, user.Rol),
-            new Claim("debeCambiarPassword", user.DebeCambiarPassword ? "true" : "false")
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.Nombre),
+            new(ClaimTypes.Role, user.Rol),
+            new("debeCambiarPassword", user.DebeCambiarPassword ? "true" : "false")
         };
+
+        foreach (var modulo in user.Modulos.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct(StringComparer.OrdinalIgnoreCase))
+            claims.Add(new Claim("modulo", modulo.Trim()));
 
         var token = new JwtSecurityToken(
             issuer: jwt["Issuer"],

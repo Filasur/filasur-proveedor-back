@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.GestionEvaluaciones)]
+[AuthorizeModulo(AppModulos.Evaluaciones)]
 [ApiController]
 [Route("api/evaluaciones")]
 public class EvaluacionesController : ControllerBase

@@ -20,7 +20,7 @@ public class ProductosController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
+    [AuthorizeModulo(AppModulos.Productos, AppModulos.Evaluaciones, AppModulos.Proveedores)]
     public async Task<ActionResult<ApiResult<IEnumerable<ProductoListItem>>>> Listar()
     {
         var data = await _service.ListarProductosAsync();
@@ -28,7 +28,7 @@ public class ProductosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.Catalogos)]
+    [AuthorizeModulo(AppModulos.Productos)]
     public async Task<ActionResult<ApiResult<ProductoListItem>>> Crear([FromBody] ProductoGuardar request)
     {
         var data = await _service.RegistrarProductoAsync(request);
@@ -36,7 +36,7 @@ public class ProductosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = AppRoles.Catalogos)]
+    [AuthorizeModulo(AppModulos.Productos)]
     public async Task<ActionResult<ApiResult<ProductoListItem>>> Actualizar(int id, [FromBody] ProductoGuardar request)
     {
         var data = await _service.ActualizarProductoAsync(id, request);

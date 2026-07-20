@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.Reportes)]
+[AuthorizeModulo(AppModulos.Reportes)]
 [ApiController]
 [Route("api/ranking")]
 public class RankingController : ControllerBase

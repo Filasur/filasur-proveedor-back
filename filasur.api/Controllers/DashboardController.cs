@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.GestionEvaluaciones)]
+[AuthorizeModulo(AppModulos.Evaluaciones)]
 [ApiController]
 [Route("api/dashboard")]
 public class DashboardController : ControllerBase

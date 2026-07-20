@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace filasur.api.Controllers;
 
-[Authorize(Roles = AppRoles.Administracion)]
+[AuthorizeModulo(AppModulos.Bitacora)]
 [ApiController]
 [Route("api/bitacora")]
 public class BitacoraController : ControllerBase

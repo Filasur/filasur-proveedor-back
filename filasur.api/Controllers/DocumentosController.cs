@@ -40,7 +40,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpGet("documentos")]
-    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
+    [AuthorizeModulo(AppModulos.Documentos, AppModulos.Proveedores, AppModulos.Evaluaciones)]
     public async Task<ActionResult<ApiResult<IEnumerable<DocumentoListItem>>>> Listar(
         [FromQuery] int? proveedorId,
         [FromQuery] string? q)
@@ -50,7 +50,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpGet("documentos/categorias")]
-    [Authorize(Roles = AppRoles.GestionProveedores)]
+    [AuthorizeModulo(AppModulos.Documentos, AppModulos.Proveedores)]
     public ActionResult<ApiResult<IEnumerable<string>>> Categorias()
     {
         return Ok(ApiResult<IEnumerable<string>>.Ok(CategoriasPermitidas.OrderBy(c => c)));
@@ -60,7 +60,7 @@ public class DocumentosController : ControllerBase
     /// Carga documentos via JSON + Base64 (evita multipart, que falla en Cloud Run con ERR_CONNECTION_CLOSED).
     /// </summary>
     [HttpPost("proveedores/{idProveedor:int}/documentos")]
-    [Authorize(Roles = AppRoles.GestionProveedores)]
+    [AuthorizeModulo(AppModulos.Documentos, AppModulos.Proveedores)]
     [RequestSizeLimit(52_428_800)]
     public async Task<ActionResult<ApiResult<object>>> SubirProveedor(
         int idProveedor,
@@ -177,7 +177,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpGet("documentos/{id:int}/descargar")]
-    [Authorize(Roles = AppRoles.GestionEvaluaciones)]
+    [AuthorizeModulo(AppModulos.Documentos, AppModulos.Proveedores, AppModulos.Evaluaciones)]
     public async Task<IActionResult> Descargar(int id)
     {
         var meta = await _documentoService.ObtenerArchivoAsync(id);
@@ -195,7 +195,7 @@ public class DocumentosController : ControllerBase
     }
 
     [HttpDelete("documentos/{id:int}")]
-    [Authorize(Roles = AppRoles.GestionProveedores)]
+    [AuthorizeModulo(AppModulos.Documentos, AppModulos.Proveedores)]
     public async Task<ActionResult<ApiResult<object>>> Eliminar(int id)
     {
         var eliminado = await _documentoService.EliminarAsync(id, User.GetUserId());
