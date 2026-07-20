@@ -6,6 +6,9 @@ public interface IEvaluacionRepository
 {
     Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? idProveedor, string? estadoCodigo);
     Task<EvaluacionBorradorDetalle?> ObtenerBorradorAsync(int idEvaluacion);
+    /// <summary>Puntajes por evaluación (clave = IdEvaluacion) para calcular turno sin N+1.</summary>
+    Task<IReadOnlyDictionary<int, Dictionary<string, decimal>>> ObtenerPuntajesPorEvaluacionesAsync(
+        IEnumerable<int> idsEvaluacion);
     Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario);
     Task GuardarCriteriosAsync(int idEvaluacion, IEnumerable<CriterioPuntaje> criterios);
     Task FinalizarAsync(int idEvaluacion, int idUsuario);

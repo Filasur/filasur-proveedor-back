@@ -30,25 +30,40 @@ public class EvaluacionService : IEvaluacionService
     public async Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? proveedorId, string? estado, bool? pendientes)
     {
         var items = (await _repository.ListarAsync(proveedorId, estado)).ToList();
+        var editables = items.Where(e => EsEstadoEditable(e.Estado)).ToList();
+        if (editables.Count == 0)
+        {
+            if (pendientes == true)
+                return items.Where(e => e.AreasPendientes > 0);
+            return items;
+        }
+
         var criteriosActivos = (await _criterios.ListarAsync())
             .Where(c => c.Activo)
             .Select(c => (c.Id, c.Area))
             .ToList();
 
-        foreach (var item in items)
+        try
         {
-            if (!EsEstadoEditable(item.Estado))
-                continue;
+            var puntajesPorEval = await _repository.ObtenerPuntajesPorEvaluacionesAsync(
+                editables.Select(e => e.Id));
 
-            var borrador = await _repository.ObtenerBorradorAsync(item.Id);
-            var puntajes = borrador?.Puntajes ?? new Dictionary<string, decimal>();
-            item.RolTurno = AreaEvaluacionRoles.FaseActual(criteriosActivos, puntajes);
-            if (item.RolTurno is not null)
-                item.AreasPendientes = Math.Max(item.AreasPendientes, 1);
+            foreach (var item in editables)
+            {
+                puntajesPorEval.TryGetValue(item.Id, out var puntajes);
+                puntajes ??= new Dictionary<string, decimal>();
+                item.RolTurno = AreaEvaluacionRoles.FaseActual(criteriosActivos, puntajes);
+                if (item.RolTurno is not null)
+                    item.AreasPendientes = Math.Max(item.AreasPendientes, 1);
+            }
+        }
+        catch
+        {
+            // Si falla el cálculo de turno, igual devolvemos el listado base.
         }
 
         if (pendientes == true)
-            return items.Where(e => e.RolTurno is not null || e.AreasPendientes > 0);
+            return items.Where(e => e.RolTurno is not null || e.AreasPendientes > 0 || EsEstadoEditable(e.Estado));
         return items;
     }
 

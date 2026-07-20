@@ -64,6 +64,31 @@ public class EvaluacionRepository : IEvaluacionRepository
         return borrador;
     }
 
+    public async Task<IReadOnlyDictionary<int, Dictionary<string, decimal>>> ObtenerPuntajesPorEvaluacionesAsync(
+        IEnumerable<int> idsEvaluacion)
+    {
+        var ids = idsEvaluacion.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<int, Dictionary<string, decimal>>();
+
+        using var conn = _factory.CreateConnection();
+        const string sql = """
+            SELECT IdEvaluacion, IdCriterio, Puntaje
+            FROM dbo.EvaluacionCriterio
+            WHERE IdEvaluacion IN @Ids
+            """;
+
+        var rows = await conn.QueryAsync<(int IdEvaluacion, int IdCriterio, decimal Puntaje)>(
+            sql,
+            new { Ids = ids });
+
+        return rows
+            .GroupBy(r => r.IdEvaluacion)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(x => x.IdCriterio.ToString(), x => x.Puntaje));
+    }
+
     public async Task<int> GuardarBorradorAsync(EvaluacionBorradorRequest request, int idUsuario)
     {
         using var conn = _factory.CreateConnection();
