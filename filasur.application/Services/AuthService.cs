@@ -16,15 +16,21 @@ public class AuthService : IAuthService
     private const int MaxIntentosFallidos = 5;
     private readonly IAuthRepository _authRepository;
     private readonly IBitacoraRepository _bitacora;
+    private readonly IConfiguracionRepository _configuracion;
+    private readonly IEmailService _email;
     private readonly IConfiguration _configuration;
 
     public AuthService(
         IAuthRepository authRepository,
         IBitacoraRepository bitacora,
+        IConfiguracionRepository configuracion,
+        IEmailService email,
         IConfiguration configuration)
     {
         _authRepository = authRepository;
         _bitacora = bitacora;
+        _configuracion = configuracion;
+        _email = email;
         _configuration = configuration;
     }
 
@@ -32,7 +38,14 @@ public class AuthService : IAuthService
     {
         var credencial = await _authRepository.ObtenerPorEmailAsync(email);
         if (credencial is null)
+        {
+            await _bitacora.RegistrarAsync(
+                null,
+                "Autenticación",
+                "Intento de inicio de sesión fallido",
+                $"Email no registrado: {email}");
             return null;
+        }
 
         if (!credencial.Activo)
             throw new InvalidOperationException("El usuario está inactivo. Contacte al administrador.");
@@ -42,14 +55,20 @@ public class AuthService : IAuthService
 
         if (!BCrypt.Net.BCrypt.Verify(password, credencial.PasswordHash))
         {
-            await _authRepository.RegistrarIntentoFallidoAsync(
+            var bloquear = credencial.IntentosFallidos + 1 >= MaxIntentosFallidos;
+            await _authRepository.RegistrarIntentoFallidoAsync(credencial.Id, bloquear);
+            await _bitacora.RegistrarAsync(
                 credencial.Id,
-                credencial.IntentosFallidos + 1 >= MaxIntentosFallidos);
+                "Autenticación",
+                "Intento de inicio de sesión fallido",
+                $"Usuario {credencial.Email} falló autenticación (intento {credencial.IntentosFallidos + 1})."
+                    + (bloquear ? " Cuenta bloqueada temporalmente." : string.Empty));
             return null;
         }
 
         await _authRepository.ResetearIntentosAsync(credencial.Id);
 
+        var modulos = await _authRepository.ObtenerModulosPorRolAsync(credencial.Rol);
         var user = new UsuarioLogin
         {
             Id = credencial.Id,
@@ -57,7 +76,8 @@ public class AuthService : IAuthService
             Email = credencial.Email,
             Rol = credencial.Rol,
             Iniciales = credencial.Iniciales,
-            DebeCambiarPassword = credencial.DebeCambiarPassword
+            DebeCambiarPassword = credencial.DebeCambiarPassword,
+            Modulos = modulos.ToList()
         };
 
         await _bitacora.RegistrarAsync(
@@ -78,6 +98,24 @@ public class AuthService : IAuthService
         var passwordTemporal = GenerarPasswordTemporal();
         var hash = BCrypt.Net.BCrypt.HashPassword(passwordTemporal);
         await _authRepository.ActualizarPasswordAsync(credencial.Id, hash, debeCambiarPassword: true);
+
+        await _bitacora.RegistrarAsync(
+            credencial.Id,
+            "Autenticación",
+            "Recuperación de contraseña",
+            $"Se generó contraseña temporal para {credencial.Email}.");
+
+        var cfg = await _configuracion.ObtenerAsync();
+        if (cfg?.NotificacionesEmail == 1)
+        {
+            await _email.EnviarAsync(
+                [credencial.Email],
+                "Filasur — Contraseña temporal",
+                $"<p>Hola {credencial.Nombre},</p>"
+                + "<p>Se generó una contraseña temporal para su cuenta:</p>"
+                + $"<p><strong>{passwordTemporal}</strong></p>"
+                + "<p>Debe cambiarla al iniciar sesión.</p>");
+        }
 
         return new RecuperarPasswordResult { PasswordTemporal = passwordTemporal };
     }

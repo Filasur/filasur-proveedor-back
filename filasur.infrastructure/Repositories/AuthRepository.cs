@@ -108,4 +108,37 @@ public class AuthRepository : IAuthRepository
             DebeCambiarPassword = debeCambiarPassword
         });
     }
+
+    public async Task<IReadOnlyList<string>> ObtenerModulosPorRolAsync(string nombreRol)
+    {
+        const string sql = """
+            SELECT rm.Modulo
+            FROM dbo.RolModulo rm
+            INNER JOIN dbo.Rol r ON r.IdRol = rm.IdRol
+            WHERE r.Nombre = @NombreRol
+            ORDER BY rm.Modulo
+            """;
+
+        using var conn = _factory.CreateConnection();
+        var rows = await conn.QueryAsync<string>(sql, new { NombreRol = nombreRol });
+        return rows.ToList();
+    }
+
+    public async Task<IReadOnlyList<string>> ObtenerEmailsPorRolesAsync(params string[] roles)
+    {
+        if (roles.Length == 0)
+            return Array.Empty<string>();
+
+        const string sql = """
+            SELECT DISTINCT u.Email
+            FROM dbo.Usuario u
+            INNER JOIN dbo.Rol r ON r.IdRol = u.IdRol
+            WHERE u.IdEstadoUsuario = 1
+              AND r.Nombre IN @Roles
+            """;
+
+        using var conn = _factory.CreateConnection();
+        var rows = await conn.QueryAsync<string>(sql, new { Roles = roles });
+        return rows.ToList();
+    }
 }

@@ -29,13 +29,15 @@ public class DashboardRepository : IDashboardRepository
         var recientes = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
         var proximas = (await multi.ReadAsync<DashboardEvaluacionItem>()).ToList();
         var evolucion = (await multi.ReadAsync<DashboardEvolucionMensualItem>()).ToList();
+        var documentos = (await multi.ReadAsync<DashboardDocumentoAlertaItem>()).ToList();
 
         return new DashboardData
         {
             Resumen = resumen,
             EvaluacionesRecientes = recientes,
             ProximasVencer = proximas,
-            EvolucionMensual = evolucion
+            EvolucionMensual = evolucion,
+            DocumentosPorVencer = documentos
         };
     }
 }

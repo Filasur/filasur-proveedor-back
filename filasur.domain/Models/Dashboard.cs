@@ -7,6 +7,7 @@ public class DashboardResumen
     public int EvaluacionesFinalizadas { get; set; }
     public int ProveedoresAprobados { get; set; }
     public decimal? PuntajePromedio { get; set; }
+    public int DocumentosPorVencer { get; set; }
 }
 
 public class DashboardEvaluacionItem
@@ -17,6 +18,16 @@ public class DashboardEvaluacionItem
     public int AreasPendientes { get; set; }
     public string Estado { get; set; } = string.Empty;
     public string? FechaLimite { get; set; }
+}
+
+public class DashboardDocumentoAlertaItem
+{
+    public int Id { get; set; }
+    public string Proveedor { get; set; } = string.Empty;
+    public string Archivo { get; set; } = string.Empty;
+    public string Categoria { get; set; } = string.Empty;
+    public string? FechaVencimiento { get; set; }
+    public string Estado { get; set; } = string.Empty;
 }
 
 public class DashboardEvolucionMensualItem
@@ -31,6 +42,7 @@ public class DashboardData
     public List<DashboardEvaluacionItem> EvaluacionesRecientes { get; set; } = [];
     public List<DashboardEvaluacionItem> ProximasVencer { get; set; } = [];
     public List<DashboardEvolucionMensualItem> EvolucionMensual { get; set; } = [];
+    public List<DashboardDocumentoAlertaItem> DocumentosPorVencer { get; set; } = [];
 }
 
 public class RankingItem
@@ -44,7 +56,7 @@ public class RankingItem
 
 public class BitacoraItem
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public string Fecha { get; set; } = string.Empty;
     public string Usuario { get; set; } = string.Empty;
     public string Accion { get; set; } = string.Empty;

@@ -29,7 +29,8 @@ public class DashboardController : ControllerBase
             {
                 resumen = new DashboardResumen(),
                 evaluacionesRecientes = Array.Empty<DashboardEvaluacionItem>(),
-                proximasVencer = Array.Empty<DashboardEvaluacionItem>()
+                proximasVencer = Array.Empty<DashboardEvaluacionItem>(),
+                documentosPorVencer = Array.Empty<DashboardDocumentoAlertaItem>()
             }));
         }
 
@@ -41,6 +42,7 @@ public class DashboardController : ControllerBase
             resumen = data.Resumen,
             evaluacionesRecientes = data.EvaluacionesRecientes,
             proximasVencer = data.ProximasVencer,
+            documentosPorVencer = data.DocumentosPorVencer,
             chartPorEstado = new
             {
                 total = enProceso + finalizadas,

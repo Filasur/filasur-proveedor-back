@@ -9,4 +9,6 @@ public interface IAuthRepository
     Task RegistrarIntentoFallidoAsync(int idUsuario, bool bloquear);
     Task ResetearIntentosAsync(int idUsuario);
     Task ActualizarPasswordAsync(int idUsuario, string passwordHash, bool debeCambiarPassword);
+    Task<IReadOnlyList<string>> ObtenerModulosPorRolAsync(string nombreRol);
+    Task<IReadOnlyList<string>> ObtenerEmailsPorRolesAsync(params string[] roles);
 }

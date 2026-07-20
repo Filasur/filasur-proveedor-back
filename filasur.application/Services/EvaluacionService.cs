@@ -9,11 +9,22 @@ public class EvaluacionService : IEvaluacionService
 {
     private readonly IEvaluacionRepository _repository;
     private readonly ICriterioRepository _criterios;
+    private readonly IConfiguracionRepository _configuracion;
+    private readonly IAuthRepository _auth;
+    private readonly IEmailService _email;
 
-    public EvaluacionService(IEvaluacionRepository repository, ICriterioRepository criterios)
+    public EvaluacionService(
+        IEvaluacionRepository repository,
+        ICriterioRepository criterios,
+        IConfiguracionRepository configuracion,
+        IAuthRepository auth,
+        IEmailService email)
     {
         _repository = repository;
         _criterios = criterios;
+        _configuracion = configuracion;
+        _auth = auth;
+        _email = email;
     }
 
     public async Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? proveedorId, string? estado, bool? pendientes)
@@ -66,17 +77,46 @@ public class EvaluacionService : IEvaluacionService
         return await _repository.GuardarBorradorAsync(requestFiltrado, idUsuario);
     }
 
-    public async Task<EvaluacionConsolidacion?> ObtenerConsolidacionAsync(int id)
+    public Task<EvaluacionConsolidacion?> ObtenerConsolidacionAsync(int id) =>
+        _repository.ObtenerConsolidacionAsync(id);
+
+    public async Task AprobarAsync(int id, int idUsuario)
     {
-        var data = await _repository.ObtenerConsolidacionAsync(id);
-        return data;
+        await _repository.AprobarAsync(id, idUsuario);
+        await NotificarDecisionAsync(id, aprobada: true, motivo: null);
     }
 
-    public Task AprobarAsync(int id, int idUsuario) =>
-        _repository.AprobarAsync(id, idUsuario);
+    public async Task RechazarAsync(int id, int idUsuario, string? motivo)
+    {
+        await _repository.RechazarAsync(id, idUsuario, motivo);
+        await NotificarDecisionAsync(id, aprobada: false, motivo);
+    }
 
-    public Task RechazarAsync(int id, int idUsuario, string? motivo) =>
-        _repository.RechazarAsync(id, idUsuario, motivo);
+    private async Task NotificarDecisionAsync(int idEvaluacion, bool aprobada, string? motivo)
+    {
+        var cfg = await _configuracion.ObtenerAsync();
+        if (cfg?.NotificacionesEmail != 1)
+            return;
+
+        var data = await _repository.ObtenerConsolidacionAsync(idEvaluacion);
+        if (data is null)
+            return;
+
+        var destinarios = await _auth.ObtenerEmailsPorRolesAsync(
+            AreaEvaluacionRoles.Administrador,
+            AreaEvaluacionRoles.Compras);
+
+        var resultado = aprobada ? "APROBADO" : "RECHAZADO";
+        var asunto = $"Filasur — Evaluación {resultado}: {data.Cabecera.Proveedor}";
+        var cuerpo =
+            $"<p>La evaluación <strong>#{idEvaluacion}</strong> del proveedor "
+            + $"<strong>{data.Cabecera.Proveedor}</strong> fue marcada como <strong>{resultado}</strong>.</p>"
+            + $"<p>Producto: {data.Cabecera.Producto ?? "—"}<br/>"
+            + $"Puntaje: {data.Cabecera.PuntajeFinal} / {data.Cabecera.PuntajeMax}</p>"
+            + (string.IsNullOrWhiteSpace(motivo) ? string.Empty : $"<p>Motivo: {motivo}</p>");
+
+        await _email.EnviarAsync(destinarios, asunto, cuerpo);
+    }
 
     private async Task ValidarPuntajesCompletosParaFinalizarAsync(
         EvaluacionBorradorRequest request,
@@ -106,8 +146,8 @@ public class EvaluacionService : IEvaluacionService
         if (faltantes.Count > 0)
         {
             throw new InvalidOperationException(
-                $"No se puede finalizar: faltan puntajes de {faltantes.Count} criterio(s) " +
-                $"(p. ej. «{faltantes[0]}»). Cada área debe completar los suyos.");
+                $"No se puede finalizar: faltan puntajes de {faltantes.Count} criterio(s) "
+                + $"(p. ej. «{faltantes[0]}»). Cada área debe completar los suyos.");
         }
     }
 }

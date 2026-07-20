@@ -2,6 +2,7 @@ using filasur.api;
 using filasur.api.Middleware;
 using filasur.application.Interfaces;
 using filasur.application.Logging;
+using filasur.application.Options;
 using filasur.application.Services;
 using filasur.domain.Interfaces;
 using filasur.infrastructure.Data;
@@ -29,6 +30,8 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 52_428_800;
     options.ValueLengthLimit = 52_428_800;
 });
+
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
@@ -89,6 +92,7 @@ builder.Services.AddScoped<IDocumentoRepository, DocumentoRepository>();
 builder.Services.AddScoped<ICriterioRepository, CriterioRepository>();
 builder.Services.AddScoped<ICatalogoRepository, CatalogoRepository>();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IEvaluacionService, EvaluacionService>();

@@ -8,6 +8,7 @@ public class UsuarioLogin
     public string Rol { get; set; } = string.Empty;
     public string Iniciales { get; set; } = string.Empty;
     public bool DebeCambiarPassword { get; set; }
+    public List<string> Modulos { get; set; } = [];
 }
 
 public class UsuarioCredencial

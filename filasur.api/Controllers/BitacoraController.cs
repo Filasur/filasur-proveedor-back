@@ -20,7 +20,7 @@ public class BitacoraController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResult<IEnumerable<BitacoraItem>>>> Listar([FromQuery] int top = 100)
+    public async Task<ActionResult<ApiResult<IEnumerable<BitacoraItem>>>> Listar([FromQuery] int top = 300)
     {
         var data = await _service.ListarAsync(top);
         return Ok(ApiResult<IEnumerable<BitacoraItem>>.Ok(data));

@@ -786,7 +786,7 @@ BEGIN
 
     /* 4. Bitácora relacionada */
     SELECT TOP (30)
-        b.IdBitacora AS id,
+        CAST(b.IdBitacora AS NVARCHAR(40)) AS id,
         CONVERT(VARCHAR(16), b.FechaHora, 103) + N' ' + CONVERT(VARCHAR(5), b.FechaHora, 108) AS fecha,
         ISNULL(u.NombreCompleto, N'Sistema') AS usuario,
         b.Accion AS accion,
