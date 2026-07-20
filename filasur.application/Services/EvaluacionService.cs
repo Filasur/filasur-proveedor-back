@@ -12,19 +12,22 @@ public class EvaluacionService : IEvaluacionService
     private readonly IConfiguracionRepository _configuracion;
     private readonly IAuthRepository _auth;
     private readonly IEmailService _email;
+    private readonly IBitacoraRepository _bitacora;
 
     public EvaluacionService(
         IEvaluacionRepository repository,
         ICriterioRepository criterios,
         IConfiguracionRepository configuracion,
         IAuthRepository auth,
-        IEmailService email)
+        IEmailService email,
+        IBitacoraRepository bitacora)
     {
         _repository = repository;
         _criterios = criterios;
         _configuracion = configuracion;
         _auth = auth;
         _email = email;
+        _bitacora = bitacora;
     }
 
     public async Task<IEnumerable<EvaluacionListItem>> ListarAsync(int? proveedorId, string? estado, bool? pendientes)
@@ -137,7 +140,37 @@ public class EvaluacionService : IEvaluacionService
         if (request.Finalizar)
             await ValidarPuntajesCompletosParaFinalizarAsync(requestFiltrado, criterios);
 
-        return await _repository.GuardarBorradorAsync(requestFiltrado, idUsuario);
+        var id = await _repository.GuardarBorradorAsync(requestFiltrado, idUsuario);
+        await RegistrarBitacoraFaseAsync(requestFiltrado, id, idUsuario, rolUsuario);
+        return id;
+    }
+
+    private async Task RegistrarBitacoraFaseAsync(
+        EvaluacionBorradorRequest request,
+        int idEvaluacion,
+        int idUsuario,
+        string? rolUsuario)
+    {
+        if (request.Puntajes.Count == 0 && request.Id is > 0)
+            return;
+
+        var rol = string.IsNullOrWhiteSpace(rolUsuario) ? "Usuario" : rolUsuario.Trim();
+        var esNueva = request.Id is null or <= 0;
+        string accion;
+        if (request.Finalizar)
+            accion = $"Fase «{rol}» enviada y evaluación finalizada";
+        else if (esNueva)
+            accion = $"Evaluación iniciada — fase «{rol}» enviada";
+        else
+            accion = $"Fase «{rol}» enviada";
+
+        var detalle =
+            $"Evaluación #{idEvaluacion}; rol {rol}; {request.Puntajes.Count} criterio(s); "
+            + $"proveedorId={request.ProveedorId}"
+            + (string.IsNullOrWhiteSpace(request.Periodo) ? string.Empty : $"; periodo={request.Periodo}")
+            + (string.IsNullOrWhiteSpace(request.OrdenCompra) ? string.Empty : $"; OC={request.OrdenCompra}");
+
+        await _bitacora.RegistrarAsync(idUsuario, "Evaluaciones", accion, detalle);
     }
 
     private static bool EsEstadoEditable(string? estado) =>

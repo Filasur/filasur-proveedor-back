@@ -120,91 +120,21 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    ;WITH Combined AS (
-        SELECT
-            CAST(N'A-' + CAST(b.IdBitacora AS NVARCHAR(20)) AS NVARCHAR(40)) AS id,
-            b.FechaHora AS fechaOrden,
-            CONVERT(VARCHAR(16), b.FechaHora, 103) + N' ' + CONVERT(VARCHAR(5), b.FechaHora, 108) AS fecha,
-            ISNULL(u.NombreCompleto, N'Sistema') AS usuario,
-            b.Accion AS accion,
-            b.Detalle AS detalle,
-            b.Modulo AS modulo
-        FROM dbo.Bitacora b
-        LEFT JOIN dbo.Usuario u ON u.IdUsuario = b.IdUsuario
-
-        UNION ALL
-
-        SELECT
-            CAST(N'U-' + CAST(bu.id_bit_usuario AS NVARCHAR(20)) AS NVARCHAR(40)),
-            bu.fecha_hora,
-            CONVERT(VARCHAR(16), bu.fecha_hora, 103) + N' ' + CONVERT(VARCHAR(5), bu.fecha_hora, 108),
-            ISNULL(bu.usuario_sql, N'SQL'),
-            bu.accion,
-            LEFT(ISNULL(bu.datos_despues, bu.datos_antes), 500),
-            N'Auditoría Usuario'
-        FROM dbo.bit_usuario bu
-
-        UNION ALL
-
-        SELECT
-            CAST(N'P-' + CAST(bp.id_bit_proveedor AS NVARCHAR(20)) AS NVARCHAR(40)),
-            bp.fecha_hora,
-            CONVERT(VARCHAR(16), bp.fecha_hora, 103) + N' ' + CONVERT(VARCHAR(5), bp.fecha_hora, 108),
-            ISNULL(bp.usuario_sql, N'SQL'),
-            bp.accion,
-            LEFT(ISNULL(bp.datos_despues, bp.datos_antes), 500),
-            N'Auditoría Proveedor'
-        FROM dbo.bit_proveedor bp
-
-        UNION ALL
-
-        SELECT
-            CAST(N'R-' + CAST(br.id_bit_producto AS NVARCHAR(20)) AS NVARCHAR(40)),
-            br.fecha_hora,
-            CONVERT(VARCHAR(16), br.fecha_hora, 103) + N' ' + CONVERT(VARCHAR(5), br.fecha_hora, 108),
-            ISNULL(br.usuario_sql, N'SQL'),
-            br.accion,
-            LEFT(ISNULL(br.datos_despues, br.datos_antes), 500),
-            N'Auditoría Producto'
-        FROM dbo.bit_producto br
-
-        UNION ALL
-
-        SELECT
-            CAST(N'E-' + CAST(be.id_bit_evaluacion AS NVARCHAR(20)) AS NVARCHAR(40)),
-            be.fecha_hora,
-            CONVERT(VARCHAR(16), be.fecha_hora, 103) + N' ' + CONVERT(VARCHAR(5), be.fecha_hora, 108),
-            ISNULL(be.usuario_sql, N'SQL'),
-            be.accion,
-            LEFT(ISNULL(be.datos_despues, be.datos_antes), 500),
-            N'Auditoría Evaluación'
-        FROM dbo.bit_evaluacion be
-
-        UNION ALL
-
-        SELECT
-            CAST(N'L-' + CAST(bl.id_bit_rol AS NVARCHAR(20)) AS NVARCHAR(40)),
-            bl.fecha_hora,
-            CONVERT(VARCHAR(16), bl.fecha_hora, 103) + N' ' + CONVERT(VARCHAR(5), bl.fecha_hora, 108),
-            ISNULL(bl.usuario_sql, N'SQL'),
-            bl.accion,
-            LEFT(ISNULL(bl.datos_despues, bl.datos_antes), 500),
-            N'Auditoría Rol'
-        FROM dbo.bit_rol bl
-    )
+    /* Solo bitácora de aplicación (acciones de negocio). Las tablas bit_* quedan para DBA. */
     SELECT TOP (@Top)
-        id,
-        fecha,
-        usuario,
-        accion,
-        detalle,
-        modulo
-    FROM Combined
-    ORDER BY fechaOrden DESC;
+        CAST(b.IdBitacora AS NVARCHAR(40)) AS id,
+        CONVERT(VARCHAR(16), b.FechaHora, 103) + N' ' + CONVERT(VARCHAR(5), b.FechaHora, 108) AS fecha,
+        ISNULL(u.NombreCompleto, N'Sistema') AS usuario,
+        b.Accion AS accion,
+        b.Detalle AS detalle,
+        b.Modulo AS modulo
+    FROM dbo.Bitacora b
+    LEFT JOIN dbo.Usuario u ON u.IdUsuario = b.IdUsuario
+    ORDER BY b.FechaHora DESC;
 END;
 GO
 
-PRINT N'Script 11 OK: dashboard documentos + bitácora unificada.';
+PRINT N'Script 11 OK: dashboard documentos + bitácora de aplicación.';
 GO
 
 /* Ampliar RolModulo para que coincida con menú real del front */
