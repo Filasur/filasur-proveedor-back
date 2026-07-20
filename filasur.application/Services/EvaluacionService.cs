@@ -124,6 +124,13 @@ public class EvaluacionService : IEvaluacionService
             puntajesFiltrados[kv.Key] = kv.Value;
         }
 
+        var fechaLimite = request.FechaLimite;
+        if (fechaLimite is null && (request.Id is null or <= 0))
+        {
+            // Plazo por defecto: 15 días en zona Perú (UTC-5), para alertas del dashboard.
+            fechaLimite = FechaHoyPeru().AddDays(15);
+        }
+
         var requestFiltrado = new EvaluacionBorradorRequest
         {
             Id = request.Id,
@@ -131,7 +138,7 @@ public class EvaluacionService : IEvaluacionService
             Periodo = request.Periodo,
             IdProducto = request.IdProducto,
             OrdenCompra = request.OrdenCompra,
-            FechaLimite = request.FechaLimite,
+            FechaLimite = fechaLimite,
             Observaciones = request.Observaciones,
             Puntajes = puntajesFiltrados,
             Finalizar = request.Finalizar
@@ -248,6 +255,20 @@ public class EvaluacionService : IEvaluacionService
             throw new InvalidOperationException(
                 $"No se puede finalizar: faltan puntajes de {faltantes.Count} criterio(s) "
                 + $"(p. ej. «{faltantes[0]}»). Cada área debe completar los suyos.");
+        }
+    }
+
+    private static DateTime FechaHoyPeru()
+    {
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(
+                OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return DateTime.UtcNow.AddHours(-5).Date;
         }
     }
 }

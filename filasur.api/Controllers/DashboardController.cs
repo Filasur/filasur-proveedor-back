@@ -46,9 +46,9 @@ public class DashboardController : ControllerBase
             chartPorEstado = new
             {
                 total = enProceso + finalizadas,
-                labels = new[] { "En proceso", "En evaluación", "Finalizadas" },
-                values = new[] { enProceso, 0, finalizadas },
-                colors = new[] { "#1890ff", "#69c0ff", "#faad14" }
+                labels = new[] { "En proceso", "Finalizadas" },
+                values = new[] { enProceso, finalizadas },
+                colors = new[] { "#1890ff", "#faad14" }
             },
             chartLabels = data.EvolucionMensual.Select(x => x.Mes).ToList(),
             chartScores = data.EvolucionMensual.Select(x => x.Puntaje).ToList()

@@ -1,6 +1,7 @@
 /*
-  FILASUR - Script 11: Dashboard documentos por vencer + bitácora unificada
-  Ejecutar en BD existente DESPUÉS de 08, 09 y 10 (requiere tablas bit_*).
+  FILASUR - Parche para BD ya desplegada
+  Actualiza dashboard (docs por vencer) + bitácora en hora Perú.
+  No recrea tablas. Ejecutar en FilasurProveedores.
 */
 USE FilasurProveedores;
 GO
@@ -10,6 +11,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @Hoy DATE = CAST(
+        (SYSUTCDATETIME() AT TIME ZONE N'UTC') AT TIME ZONE N'SA Pacific Standard Time'
+        AS DATE);
     DECLARE @DiasAlerta INT = 5;
     SELECT @DiasAlerta = ISNULL(DiasAlertaVencimiento, 5) FROM dbo.ConfiguracionSistema WHERE IdConfig = 1;
 
@@ -29,10 +33,10 @@ BEGIN
         (SELECT COUNT(*)
          FROM dbo.DocumentoProveedor d
          WHERE d.FechaVencimiento IS NOT NULL
-           AND d.FechaVencimiento <= DATEADD(DAY, @DiasAlerta, CAST(SYSUTCDATETIME() AS DATE))
+           AND d.FechaVencimiento <= DATEADD(DAY, @DiasAlerta, @Hoy)
         ) AS documentosPorVencer;
 
-    /* 2. Evaluaciones recientes */
+    /* 2. Evaluaciones recientes (últimas 5) */
     SELECT TOP (5)
         e.IdEvaluacion AS id,
         p.RazonSocial AS proveedor,
@@ -50,7 +54,7 @@ BEGIN
     LEFT JOIN dbo.Producto pr ON pr.IdProducto = e.IdProducto
     ORDER BY e.FechaCreacion DESC;
 
-    /* 3. Evaluaciones por vencer */
+    /* 3. Próximas por vencer (en curso con fecha límite cercana o vencida) */
     SELECT TOP (10)
         e.IdEvaluacion AS id,
         p.RazonSocial AS proveedor,
@@ -65,16 +69,16 @@ BEGIN
     WHERE e.PuntajeFinal IS NULL
       AND ce.Codigo IN (N'EN_PROCESO', N'EN_EVALUACION')
       AND e.FechaLimite IS NOT NULL
-      AND e.FechaLimite <= DATEADD(DAY, @DiasAlerta, CAST(SYSUTCDATETIME() AS DATE))
+      AND e.FechaLimite <= DATEADD(DAY, @DiasAlerta, @Hoy)
     ORDER BY e.FechaLimite ASC;
 
-    /* 4. Evolución mensual */
+    /* 4. Evolución mensual (últimos 6 meses, puntaje % sobre escala 0-100) */
     ;WITH UltimosMeses AS (
         SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2
         UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
     ),
     Meses AS (
-        SELECT DATEADD(MONTH, -n, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)) AS PrimerDiaMes
+        SELECT DATEADD(MONTH, -n, DATEFROMPARTS(YEAR(@Hoy), MONTH(@Hoy), 1)) AS PrimerDiaMes
         FROM UltimosMeses
     )
     SELECT
@@ -103,14 +107,24 @@ BEGIN
         ISNULL(d.CategoriaDocumento, N'Sin categoría') AS categoria,
         CONVERT(VARCHAR(10), d.FechaVencimiento, 103) AS fechaVencimiento,
         CASE
-            WHEN d.FechaVencimiento < CAST(SYSUTCDATETIME() AS DATE) THEN N'Vencido'
+            WHEN d.FechaVencimiento < @Hoy THEN N'Vencido'
             ELSE N'Por vencer'
         END AS estado
     FROM dbo.DocumentoProveedor d
     INNER JOIN dbo.Proveedor p ON p.IdProveedor = d.IdProveedor
     WHERE d.FechaVencimiento IS NOT NULL
-      AND d.FechaVencimiento <= DATEADD(DAY, @DiasAlerta, CAST(SYSUTCDATETIME() AS DATE))
+      AND d.FechaVencimiento <= DATEADD(DAY, @DiasAlerta, @Hoy)
     ORDER BY d.FechaVencimiento ASC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Ranking_Listar
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT Posicion AS posicion, Proveedor AS proveedor, Puntaje AS puntaje,
+           Clasificacion AS clasificacion, Evaluaciones AS evaluaciones
+    FROM dbo.fn_RankingProveedores();
 END;
 GO
 
@@ -120,10 +134,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    /* Solo bitácora de aplicación (acciones de negocio). Las tablas bit_* quedan para DBA. */
+    /* FechaHora se guarda en UTC (SYSUTCDATETIME); se muestra en hora de Perú (UTC-5). */
     SELECT TOP (@Top)
         CAST(b.IdBitacora AS NVARCHAR(40)) AS id,
-        CONVERT(VARCHAR(16), b.FechaHora, 103) + N' ' + CONVERT(VARCHAR(5), b.FechaHora, 108) AS fecha,
+        CONVERT(VARCHAR(16),
+            CAST((b.FechaHora AT TIME ZONE N'UTC') AT TIME ZONE N'SA Pacific Standard Time' AS DATETIME2(0)),
+            103) + N' ' + CONVERT(VARCHAR(5),
+            CAST((b.FechaHora AT TIME ZONE N'UTC') AT TIME ZONE N'SA Pacific Standard Time' AS DATETIME2(0)),
+            108) AS fecha,
         ISNULL(u.NombreCompleto, N'Sistema') AS usuario,
         b.Accion AS accion,
         b.Detalle AS detalle,
@@ -134,32 +152,10 @@ BEGIN
 END;
 GO
 
-PRINT N'Script 11 OK: dashboard documentos + bitácora de aplicación.';
+UPDATE dbo.ConfiguracionSistema
+SET DiasAlertaVencimiento = 15
+WHERE IdConfig = 1 AND ISNULL(DiasAlertaVencimiento, 0) < 15;
 GO
 
-/* Ampliar RolModulo para que coincida con menú real del front */
-DECLARE @IdCompras INT = (SELECT IdRol FROM dbo.Rol WHERE Nombre = N'Compras');
-DECLARE @IdAdmin INT = (SELECT IdRol FROM dbo.Rol WHERE Nombre = N'Administrador');
-
-IF @IdCompras IS NOT NULL
-BEGIN
-    INSERT INTO dbo.RolModulo (IdRol, Modulo)
-    SELECT @IdCompras, v.Modulo
-    FROM (VALUES
-        (N'Criterios'), (N'Unidades'), (N'Productos'), (N'Configuración')
-    ) AS v(Modulo)
-    WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.RolModulo rm
-        WHERE rm.IdRol = @IdCompras AND rm.Modulo = v.Modulo
-    );
-END;
-
-IF @IdAdmin IS NOT NULL
-AND NOT EXISTS (SELECT 1 FROM dbo.RolModulo WHERE IdRol = @IdAdmin AND Modulo = N'Todos')
-BEGIN
-    INSERT INTO dbo.RolModulo (IdRol, Modulo) VALUES (@IdAdmin, N'Todos');
-END;
-GO
-
-PRINT N'RolModulo ampliado para Compras/Administrador.';
+PRINT N'Parche aplicado: dashboard + bitácora hora Perú.';
 GO
